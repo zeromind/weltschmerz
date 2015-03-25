@@ -1,0 +1,24 @@
+[anidb]
+server = api.anidb.net
+port = 9000
+
+[connection]
+local_port = 27775
+nat = 0
+protover = 3
+enc = UTF-8
+logfile = udpapi.log
+
+[user]
+username = mrmoo
+password = drinkonlymrmoomilk
+
+[client]
+name = weltschmerz
+version = 0
+database = weltschmerz.sqlite3
+log = weltschmerz.log
+fileextensions = 7z aac ac3 ace asf ass avi dts dtshd flac flv idx js lrc m2ts m4a mk3d mka mks mkv mov mp3 mp4 mpeg mpg ogg ogm ogv qt rar rm rmvb smi smil srt ssa sub sup swf thd ts tts wav webm wma wmv xss zip
+threads = 4
+folders = /hallon /syltburk /saltkar
+
