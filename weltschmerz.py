@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3.4
+#!/usr/bin/python3.5
 
 import configparser
 import db
@@ -10,6 +10,7 @@ import re
 import sys
 import threading
 import queue
+import argparse
 
 config = configparser.ConfigParser()
 config.read_file(open('weltschmerz.cfg'))
@@ -63,7 +64,8 @@ def parse(folders):
 def parser():
     while True:
         filename = qin.get()
-        data = filehash.hash_file(filename)
+        fhash = filehash.FileHash(filename)
+        data = (fhash.filename, fhash.filesize, fhash.crc32, fhash.md5, fhash.sha1, fhash.ed2k)
         qout.put(data)
         logging.info(''.join(('hashed: ', filename)))
         qin.task_done()
