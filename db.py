@@ -110,3 +110,21 @@ class connection():
                 self.cur.execute('SELECT filename FROM file')
                 files = [f[0] for f in self.cur.fetchall()]
                 return files
+        def hashed_files_size(self):
+                self.cur.execute('SELECT filename, filesize FROM file')
+                files = self.cur.fetchall()
+                return files
+        def get_dupes(self):
+                self.cur.execute('SELECT file.hash_sha1, file.filename FROM file WHERE (file.filesize, file.hash_crc, file.hash_md5, file.hash_ed2k, file.hash_sha1) in (select f.filesize, f.hash_crc, f.hash_md5, f.hash_ed2k, f.hash_sha1 from file as f group by f.hash_crc, f.hash_md5, f.hash_ed2k, f.hash_sha1 having count(*) >= 2)')
+                result = {}
+                for file in self.cur.fetchall():
+                        if file[0] in result:
+                                result[file[0]].append(file[1])
+                        else:
+                                result[file[0]] = [file[1]]
+                return result
+        def del_dupe(self, hash_sha1, filename):
+                self.cur.execute('DELETE FROM file WHERE hash_sha1=:hash_sha1 AND filename=:filename', {'hash_sha1': hash_sha1, 'filename': filename})
+        def del_file_by_name(self, filename):
+                self.cur.execute('DELETE FROM file WHERE filename=:filename', {'filename': filename})
+
