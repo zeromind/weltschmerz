@@ -14,15 +14,12 @@ pp = pprint.PrettyPrinter(width=240)
 for i, (hash_sha1, files) in enumerate(dupes.items(), start=1):
     selection = None
     while not selection:
-        print("{current}/{total}".format(current=i,total=total_dupes))
         print("\n" * 8 + '#' * 128 + "\n" + '[ {current:05} / {total:05} ]'.format(current=i, total=total_dupes) + "\nFiles to keep:\n")
         if len(set([os.path.split(file)[1] for file in files])) == 1:
             selection = files[0]
             print('File to keep:')
             print(selection)
         else:
-            #pp.pprint(files)
-            #break
             selection = pyselect.select(sorted(files))
     if not selection:
         continue
@@ -36,5 +33,4 @@ for i, (hash_sha1, files) in enumerate(dupes.items(), start=1):
                     os.remove(f)
                 dbc.del_dupe(hash_sha1, f)
                 dbc.conn.commit()
-#    sys.exit(0)
 
