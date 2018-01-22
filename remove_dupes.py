@@ -1,4 +1,4 @@
-#usr/bin/python3
+#!/usr/bin/python3
 
 import os
 import db
@@ -9,21 +9,13 @@ import filehash
 
 dbc = db.connection()
 dupes = dbc.get_dupes()
-print(len(dupes))
-sys.exit(0)
+total_dupes = len(dupes)
 pp = pprint.PrettyPrinter(width=240)
-for hash_sha1, files in dupes.items():
+for i, (hash_sha1, files) in enumerate(dupes.items(), start=1):
     selection = None
     while not selection:
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
-        print('#' * 128)
-        print('')
-        print('File to keep:')
+        print("{current}/{total}".format(current=i,total=total_dupes))
+        print("\n" * 8 + '#' * 128 + "\n" + '[ {current:05} / {total:05} ]'.format(current=i, total=total_dupes) + "\nFiles to keep:\n")
         if len(set([os.path.split(file)[1] for file in files])) == 1:
             selection = files[0]
             print('File to keep:')
