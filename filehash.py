@@ -55,9 +55,10 @@ class ed2k:
 
 
 class FileHash:
-    def __init__(self, filename):
+    def __init__(self, directory, filename):
+        self.directory = directory
         self.filename = filename
-        self.filesize = os.path.getsize(filename)
+        self.filesize = os.path.getsize(os.path.join(directory, filename))
         (self.crc32, self.md5, self.sha1, self.ed2k) = self.hash_file()
 
     def hash_file(self):
@@ -70,7 +71,7 @@ class FileHash:
         data = [b'']
         threads = [T(h, data) for n, h in hashes.items()]
         [t.start() for t in threads]
-        with open(self.filename, 'rb') as f:
+        with open(os.path.join(self.directory, self.filename), 'rb') as f:
             while True:
                 data.append(f.read(BLOCKSIZE))
                 [t.idle.acquire() for t in threads]
@@ -91,8 +92,8 @@ if __name__ == '__main__':
         file_info = FileHash(sys.argv[1])
         end = time.time()
         print('%f MB/s' % (file_info.filesize / 1048576. / (end - start)))
-        print((file_info.filename, file_info.filesize, file_info.crc32, file_info.md5, file_info.sha1, file_info.ed2k))
-        print('ed2k://|file|{filename}|{filesize}|{ed2k}|/'.format(filename = os.path.basename(file_info.filename).replace("\n",""), filesize=file_info.filesize, ed2k=file_info.ed2k))
+        print((file_info.filename, file_info.directory, file_info.filesize, file_info.crc32, file_info.md5, file_info.sha1, file_info.ed2k))
+        print('ed2k://|file|{filename}|{filesize}|{ed2k}|/'.format(filename = file_info.filename, filesize=file_info.filesize, ed2k=file_info.ed2k))
 
     except IndexError:
         print('must specify a filename')

@@ -112,7 +112,7 @@ class connection():
                             aid         INT4 NOT NULL,
                             aid_related INT4 NOT NULL,
                             type        INT4,
-                            PRIMARY KEY (aid, aid_related) UNIQUE,
+                            PRIMARY KEY (aid, aid_related),
                             FOREIGN KEY (aid) REFERENCES anime(aid),
                             FOREIGN KEY (aid_related) REFERENCES anime(aid)
                 );''')
@@ -143,12 +143,12 @@ class connection():
         self.conn.close()
 
     def hashed_files(self):
-        self.cur.execute('SELECT filename, directory FROM file')
-        files = [f[0:1] for f in self.cur.fetchall()]
+        self.cur.execute('SELECT directory, filename FROM local_file')
+        files = [f for f in self.cur.fetchall()]
         return files
 
     def hashed_files_size(self):
-        self.cur.execute('SELECT filename, filesize FROM local_file')
+        self.cur.execute('SELECT directory, filename, filesize FROM local_file')
         files = self.cur.fetchall()
         return files
 

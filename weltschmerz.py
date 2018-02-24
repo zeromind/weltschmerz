@@ -1,4 +1,4 @@
-#!/usr/bin/python3.5
+#!/usr/bin/python3
 
 import configparser
 import db
@@ -26,6 +26,7 @@ logging.basicConfig(filename=logfile, format='%(asctime)s - %(levelname)s - %(me
 # TODO: add absolute path
 def get_files(list, hashed_files):
     files = []
+    known_files = []
     logging.info('Scanning for files...')
     for path in list:
         logging.info(''.join(('Scanning for files: ', path)))
@@ -35,12 +36,17 @@ def get_files(list, hashed_files):
                     if re.search('\udcd7|\udcb7', filename):
                         logging.warning(''.join(('skipped a file in ', os.path.abspath(dirpath))))
                     else:
-                        filefullpath = os.path.join(os.path.abspath(dirpath), filename)
-                        if filefullpath not in hashed_files:
-                            files.append(filefullpath)
-                            qin[path].put(filefullpath)
+                        real_path = os.path.abspath(dirpath)
+                        if (real_path, filename) in hashed_files:
+                            known_files.append((real_path, filename))
+                            continue
+                        elif (real_path, filename) in files:
+                            continue
+                        else:
+                            files.append((real_path, filename))
+                            qin[path].put((real_path, filename))
 
-    logging.info(''.join((str(len(files)), ' files found')))
+    logging.info('{} files to hash found, skipping {} which had been hashed already'.format(len(set(files)), len(set(known_files))))
     return files
 
 
@@ -64,13 +70,13 @@ def db_disconnect(dbconnector):
 def parser(folder):
     print(folder)
     while True:
-        filename = qin[folder].get()
+        (directory, filename) = qin[folder].get()
         start = time.time()
-        fhash = filehash.FileHash(filename)
+        fhash = filehash.FileHash(directory, filename)
         end = time.time()
-        data = (fhash.filename, fhash.filesize, fhash.crc32, fhash.md5, fhash.sha1, fhash.ed2k)
+        data = (fhash.filename, fhash.directory, fhash.filesize, fhash.crc32, fhash.md5, fhash.sha1, fhash.ed2k)
         qout.put(data)
-        logging.info(''.join(('hashed: ', filename, ' %i MB @' % (fhash.filesize / 1048576.),
+        logging.info(''.join(('hashed: ', os.path.join(directory, filename), ' %i MB @' % (fhash.filesize / 1048576.),
                               ' %f MB/s' % (fhash.filesize / 1048576. / (end - start)))))
         qin[folder].task_done()
 
