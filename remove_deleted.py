@@ -5,7 +5,6 @@ import db
 
 dbc = db.connection()
 hashed_files = dbc.hashed_files()
-pp = pprint.PrettyPrinter(width=240)
 for filename in hashed_files:
     if not os.path.isfile(filename):
         print('###### deleting {}'.format(filename))

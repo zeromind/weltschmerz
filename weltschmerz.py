@@ -70,7 +70,8 @@ def parser(folder):
         end = time.time()
         data = (fhash.filename, fhash.filesize, fhash.crc32, fhash.md5, fhash.sha1, fhash.ed2k)
         qout.put(data)
-        logging.info(''.join(('hashed: ', filename, ' %i MB @' % (fhash.filesize / 1048576.), ' %f MB/s' % (fhash.filesize / 1048576. / (end - start)))))
+        logging.info(''.join(('hashed: ', filename, ' %i MB @' % (fhash.filesize / 1048576.),
+                              ' %f MB/s' % (fhash.filesize / 1048576. / (end - start)))))
         qin[folder].task_done()
 
 
@@ -80,7 +81,7 @@ def sql_worker():
         data = qout.get()
         dbc.add_file_hashed(data)
         qout.task_done()
-    db_disconnect(dbc)
+    # db_disconnect(dbc)
 
 
 if __name__ == "__main__":
@@ -93,14 +94,14 @@ if __name__ == "__main__":
 
     qout = queue.Queue()
     for f in folders:
-        t = threading.Thread(target=parser, kwargs={'folder':f})
+        t = threading.Thread(target=parser, kwargs={'folder': f})
         t.daemon = True
         t.start()
     sqlt = threading.Thread(target=sql_worker)
     sqlt.daemon = True
     sqlt.start()
     fcount = get_files(folders, hashed_files)
-    for f,q in qin.items():
-      q.join()
+    for f, q in qin.items():
+        q.join()
     qout.join()
     logging.info('hashed: em all')
