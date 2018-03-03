@@ -87,12 +87,14 @@ class connection():
                             directory   VARCHAR NOT NULL,
                             filesize    INT     NOT NULL,
                             fid         INT,
+                            aid         INT,
                             hash_crc    VARCHAR,
                             hash_md5    VARCHAR,
                             hash_sha1   VARCHAR,
                             hash_tth    VARCHAR,
                             hash_ed2k   VARCHAR NOT NULL,
-                            FOREIGN KEY (fid) REFERENCES file(fid)
+                            FOREIGN KEY (fid) REFERENCES file(fid),
+                            FOREIGN KEY (aid) REFERENCES anime(aid)
                 );
                 CREATE TABLE IF NOT EXISTS mylist (
                             ml_id       INT      PRIMARY KEY
