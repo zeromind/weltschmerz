@@ -11,12 +11,13 @@ dbc = db.connection()
 dupes = dbc.get_dupes()
 total_dupes = len(dupes)
 pp = pprint.PrettyPrinter(width=240)
-
+sys.exit(1)
 for i, (hash_sha1, files) in enumerate(dupes.items(), start=1):
     selection = None
     while not selection:
-        print("\n" * 8 + '#' * 128 + "\n" + '[ {current:05} / {total:05} ]'.format(current=i,
-                                                                                   total=total_dupes) + "\nFiles to keep:\n")
+        print("\n" * 8 + '#' * 128 + "\n")
+        print('[ {current:05} / {total:05} ]'.format(current=i, total=total_dupes))
+        print('Files to keep:')
         if len(set([os.path.split(file)[1] for file in files])) == 1:
             selection = files[0]
             print('File to keep:')
