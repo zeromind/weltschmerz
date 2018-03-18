@@ -171,4 +171,4 @@ class connection():
             {'hash_sha1': hash_sha1, 'filename': filename, 'directory': directory})
 
     def del_file_by_name(self, filename, directory):
-        self.cur.execute('DELETE FROM file WHERE filename=:filename', {'filename': filename, 'directory': directory})
+        self.cur.execute('DELETE FROM file WHERE filename=:filename AND directory=:directory', {'filename': filename, 'directory': directory})
