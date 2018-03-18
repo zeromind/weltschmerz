@@ -19,16 +19,15 @@ extensions = re.split(' ', config.get('client', 'fileextensions'))
 dbname = config.get('client', 'database', fallback='weltschmerz.sqlite3')
 logfile = config.get('client', 'log', fallback='weltschmerz.log')
 folders = re.split(' ', config.get('client', 'folders'))
+folders_exclude = re.split(' ', config.get('client', 'folders_exclude'))
 num_worker_threads = int(config.get('client', 'threads', fallback=4))
 logging.basicConfig(filename=logfile, format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 
-# TODO: add absolute path
-def get_files(list, hashed_files):
+def get_files(folders, hashed_files):
     files = []
     known_files = []
-    logging.info('Scanning for files...')
-    for path in list:
+    for path in folders:
         logging.info(''.join(('Scanning for files: ', path)))
         for dirpath, dirnames, filenames in os.walk(path):
             for ext in extensions:
@@ -36,7 +35,7 @@ def get_files(list, hashed_files):
                     if re.search('\udcd7|\udcb7', filename):
                         logging.warning(''.join(('skipped a file in ', os.path.abspath(dirpath))))
                     else:
-                        real_path = os.path.abspath(dirpath)
+                        real_path = os.path.realpath(os.path.abspath(dirpath))
                         if (real_path, filename) in hashed_files:
                             known_files.append((real_path, filename))
                             continue
@@ -46,17 +45,12 @@ def get_files(list, hashed_files):
                             files.append((real_path, filename))
                             qin[path].put((real_path, filename))
 
-    logging.info('{} files to hash found, skipping {} which had been hashed already'.format(len(set(files)), len(set(known_files))))
+    logging.info('{} files to hash found for {} - skipping {} which had been hashed already'.format(len(set(files)), len(set(known_files),','.join(list))))
     return files
 
 
 def db_connect(name):
     logging.info(''.join(('Establishing database connection (', dbname, ')...')))
-    # if os.path.isfile(name):
-    #        dbc = db.connection()
-    # else:
-    #        dbc = db.connection()
-    #        dbc.initialise_db()
     dbc = db.connection()
     dbc.initialise_db()
     return dbc
@@ -68,7 +62,6 @@ def db_disconnect(dbconnector):
 
 
 def parser(folder):
-    print(folder)
     while True:
         (directory, filename) = qin[folder].get()
         start = time.time()
@@ -87,7 +80,6 @@ def sql_worker():
         data = qout.get()
         dbc.add_file_hashed(data)
         qout.task_done()
-    # db_disconnect(dbc)
 
 
 if __name__ == "__main__":
@@ -95,18 +87,25 @@ if __name__ == "__main__":
     hashed_files = dbc.hashed_files()
     db_disconnect(dbc)
     qin = {}
+    qout = queue.Queue()
+    fi = {}
     for f in folders:
         qin[f] = queue.Queue()
 
-    qout = queue.Queue()
-    for f in folders:
+        fi[f] = threading.Thread(target=get_files, kwargs={'folders':[f],'hashed_files':hashed_files})
+        fi[f].daemon = True
+        fi[f].start()
+
         t = threading.Thread(target=parser, kwargs={'folder': f})
         t.daemon = True
         t.start()
+
     sqlt = threading.Thread(target=sql_worker)
     sqlt.daemon = True
     sqlt.start()
-    fcount = get_files(folders, hashed_files)
+
+    for i,walk_thread in fi.items():
+        walk_thread.join()
     for f, q in qin.items():
         q.join()
     qout.join()
