@@ -32,7 +32,7 @@ def get_files(folders, hashed_files):
         for dirpath, dirnames, filenames in os.walk(path):
             for ext in extensions:
                 for filename in fnmatch.filter(filenames, ''.join(('*.', ext))):
-                    if re.search('\udcd7|\udcb7', filename):
+                    if re.search('[\udcd7\udcb7]', filename):
                         logging.warning(''.join(('skipped a file in ', os.path.abspath(dirpath))))
                     else:
                         real_path = os.path.realpath(os.path.abspath(dirpath))
@@ -45,20 +45,19 @@ def get_files(folders, hashed_files):
                             files.append((real_path, filename))
                             qin[path].put((real_path, filename))
 
-    logging.info('{} files to hash found for {} - skipping {} which had been hashed already'.format(len(set(files)), len(set(known_files),','.join(list))))
+    logging.info('{} files to hash for {}. skipping {} which had been hashed already'.format(len(set(files)),
+                                                                                             ','.join(folders),
+                                                                                             len(set(known_files))
+                                                                                             )
+                 )
     return files
 
 
 def db_connect(name):
-    logging.info(''.join(('Establishing database connection (', dbname, ')...')))
-    dbc = db.connection()
-    dbc.initialise_db()
-    return dbc
-
-
-def db_disconnect(dbconnector):
-    logging.info(''.join(('Closing database connection (', dbname, ')...')))
-    dbconnector.shutdown()
+    logging.info('Establishing database connection ({db})...'.format(db=name))
+    db_connection = db.Connection()
+    db_connection.initialise_db()
+    return db_connection
 
 
 def parser(folder):
@@ -69,8 +68,9 @@ def parser(folder):
         end = time.time()
         data = (fhash.filename, fhash.directory, fhash.filesize, fhash.crc32, fhash.md5, fhash.sha1, fhash.ed2k)
         qout.put(data)
-        logging.info(''.join(('hashed: ', os.path.join(directory, filename), ' %i MB @' % (fhash.filesize / 1048576.),
-                              ' %f MB/s' % (fhash.filesize / 1048576. / (end - start)))))
+        logging.info('hashed: {file} {size}MB @ {speed}MB/s'.format(file=os.path.join(directory, filename),
+                                                                    size=(fhash.filesize / 1048576.),
+                                                                    speed=(fhash.filesize / 1048576. / (end - start))))
         qin[folder].task_done()
 
 
@@ -85,14 +85,15 @@ def sql_worker():
 if __name__ == "__main__":
     dbc = db_connect(dbname)
     hashed_files = dbc.hashed_files()
-    db_disconnect(dbc)
+    logging.info('Closing database connection ({db})...'.format(db=name))
+    dbc.shutdown()
     qin = {}
     qout = queue.Queue()
     fi = {}
     for f in folders:
         qin[f] = queue.Queue()
 
-        fi[f] = threading.Thread(target=get_files, kwargs={'folders':[f],'hashed_files':hashed_files})
+        fi[f] = threading.Thread(target=get_files, kwargs={'folders': [f], 'hashed_files': hashed_files})
         fi[f].daemon = True
         fi[f].start()
 
@@ -104,7 +105,7 @@ if __name__ == "__main__":
     sqlt.daemon = True
     sqlt.start()
 
-    for i,walk_thread in fi.items():
+    for i, walk_thread in fi.items():
         walk_thread.join()
     for f, q in qin.items():
         q.join()

@@ -3,7 +3,7 @@
 import sqlite3
 
 
-class connection():
+class Connection():
     def __init__(self):
         db = 'weltschmerz.sqlite3'
         self.conn = sqlite3.connect(db)
