@@ -3,6 +3,7 @@
 import hashlib
 import os.path
 import zlib
+import time
 from threading import Thread, Semaphore
 
 # Use the chunk size for calculating ed2k as block size
@@ -91,7 +92,6 @@ class FileHash:
 
 if __name__ == '__main__':
     import sys
-    import time
 
     for filename in sys.argv[1:]:
         try:
