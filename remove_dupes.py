@@ -4,41 +4,44 @@ import os
 import db
 import pyselect
 import sys
-import pprint
 import filehash
+import difflib
 
 dbc = db.connection()
 dupes = dbc.get_dupes()
 total_dupes = len(dupes)
-pp = pprint.PrettyPrinter(width=240)
-sys.exit(1)
+
 for i, (hash_sha1, files) in enumerate(dupes.items(), start=1):
+    filenames = sorted([os.path.join(dupe[0], dupe[1]) for dupe in files])
     selection = None
     while not selection:
         print("\n" * 8 + '#' * 128 + "\n")
         print('[ {current:05} / {total:05} ]'.format(current=i, total=total_dupes))
         print('Files to keep:')
-        if len(set([os.path.split(file)[1] for file in files])) == 1:
-            selection = files[0]
+        file_names = list(set([filename[1] for filename in files]))
+        if len(file_names) == 1:
+            selection = filenames[0]
             print('File to keep:')
             print(selection)
         else:
+            sys.stdout.writelines(difflib.context_diff(file_names[0], file_names[1], fromfile='a', tofile='b'))
+            print()
             # break
-            selection = pyselect.select(sorted(files))
+            selection = pyselect.select(filenames)
     if not selection:
         continue
     if os.path.isfile(selection):
-        if filehash.FileHash(selection).hash_file()[2] == hash_sha1:
+        if filehash.FileHash(os.path.split(selection)[0], os.path.split(selection)[1]).hash_file()[2] == hash_sha1:
             print('sha1 matches, removing dupes')
-            files.remove(selection)
-            for f in files:
+            filenames.remove(selection)
+            for f in filenames:
                 if os.path.isfile(f):
                     print('deleting: {}'.format(f))
                     os.remove(f)
-                dbc.del_dupe(hash_sha1, f)
+                dbc.del_dupe(hash_sha1, os.path.split(selection)[0], os.path.split(selection)[1])
                 dbc.conn.commit()
         else:
-            files.remove(selection)
+            filenames.remove(selection)
             print('removing file with sha1 mismatch from db: {}'.format(selection))
-            dbc.del_dupe(hash_sha1, selection)
+            dbc.del_dupe(hash_sha1, os.path.split(selection)[0], os.path.split(selection)[1])
             dbc.conn.commit()

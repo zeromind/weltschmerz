@@ -156,19 +156,19 @@ class Connection():
 
     def get_dupes(self):
         self.cur.execute(
-            'SELECT local_file.hash_sha1, local_file.filename, local_file.directory FROM local_file WHERE (local_file.filesize, local_file.hash_crc, local_file.hash_md5, local_file.hash_ed2k, local_file.hash_sha1) in (select f.filesize, f.hash_crc, f.hash_md5, f.hash_ed2k, f.hash_sha1 from local_file as f group by f.hash_crc, f.hash_md5, f.hash_ed2k, f.hash_sha1 having count(*) >= 2)')
+            'SELECT local_file.hash_sha1, local_file.directory, local_file.filename FROM local_file WHERE (local_file.filesize, local_file.hash_crc, local_file.hash_md5, local_file.hash_ed2k, local_file.hash_sha1) in (select f.filesize, f.hash_crc, f.hash_md5, f.hash_ed2k, f.hash_sha1 from local_file as f group by f.hash_crc, f.hash_md5, f.hash_ed2k, f.hash_sha1 having count(*) >= 2)')
         result = {}
-        for file in self.cur.fetchall():
-            if file[0] in result:
-                result[file[0]].append([file[1:2]])
+        for dupe in self.cur.fetchall():
+            if dupe[0] in result:
+                result[dupe[0]].append(dupe[1:3])
             else:
-                result[file[0]] = [[file[1:2]]]
+                result[dupe[0]] = [dupe[1:3]]
         return result
 
-    def del_dupe(self, hash_sha1, filename, directory):
+    def del_dupe(self, hash_sha1, directory, filename):
         self.cur.execute(
             'DELETE FROM local_file WHERE hash_sha1=:hash_sha1 AND filename=:filename AND directory=:directory',
             {'hash_sha1': hash_sha1, 'filename': filename, 'directory': directory})
 
-    def del_file_by_name(self, filename, directory):
-        self.cur.execute('DELETE FROM file WHERE filename=:filename AND directory=:directory', {'filename': filename, 'directory': directory})
+    def del_file_by_name(self, directory, filename):
+        self.cur.execute('DELETE FROM local_file WHERE filename=:filename AND directory=:directory', {'filename': filename, 'directory': directory})
