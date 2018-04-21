@@ -85,7 +85,7 @@ def sql_worker():
 if __name__ == "__main__":
     dbc = db_connect(dbname)
     hashed_files = dbc.hashed_files()
-    logging.info('Closing database connection ({db})...'.format(db=name))
+    logging.info('Closing database connection ({db})...'.format(db=dbname))
     dbc.shutdown()
     qin = {}
     qout = queue.Queue()

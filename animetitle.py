@@ -7,9 +7,10 @@ import os.path
 import os
 import re
 
-FN_BLACKLIST=['\'', '\\', ':', '"', '*', '?']
-AID_PAD_WIDTH=6
-AID_CHUNK_SIZE=2
+FN_BLACKLIST = ['\'', '\\', ':', '"', '*', '?']
+AID_PAD_WIDTH = 6
+AID_CHUNK_SIZE = 2
+
 
 def parse_file(filename):
     anime_list = {}
@@ -19,8 +20,9 @@ def parse_file(filename):
         if anime.attrib['aid'] not in anime_list:
             anime_list[anime.attrib['aid']] = []
         for atitle in anime:
-            anime_list[anime.attrib['aid']].append((atitle.attrib['type'], atitle.attrib['{http://www.w3.org/XML/1998/namespace}lang'], atitle.text ))
+            anime_list[anime.attrib['aid']].append((atitle.attrib['type'], atitle.attrib['{http://www.w3.org/XML/1998/namespace}lang'], atitle.text))
     return anime_list
+
 
 if __name__ == "__main__":
     import sys
