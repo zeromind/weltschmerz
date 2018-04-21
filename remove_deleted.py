@@ -3,7 +3,7 @@
 import os
 import db
 
-dbc = db.connection()
+dbc = db.Connection()
 hashed_files = dbc.hashed_files()
 for directory, filename in hashed_files:
     if not os.path.isfile(os.path.join(directory, filename)):

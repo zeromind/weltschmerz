@@ -3,7 +3,7 @@
 import os
 import db
 
-dbc = db.connection()
+dbc = db.Connection()
 hashed_files = dbc.hashed_files_size()
 
 for filename, filesize in hashed_files:

@@ -7,7 +7,7 @@ import sys
 import filehash
 import difflib
 
-dbc = db.connection()
+dbc = db.Connection()
 dupes = dbc.get_dupes()
 total_dupes = len(dupes)
 
