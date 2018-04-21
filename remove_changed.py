@@ -6,9 +6,9 @@ import db
 dbc = db.Connection()
 hashed_files = dbc.hashed_files_size()
 
-for filename, filesize in hashed_files:
-    if os.path.isfile(filename):
-        if filesize != os.path.getsize(filename):
-            print('###### filesize mismatch, deleting {}'.format(filename))
-            dbc.del_file_by_name(filename)
+for directory, filename, filesize in hashed_files:
+    if os.path.isfile(os.path.join(directory, filename)):
+        if filesize != os.path.getsize(os.path.join(directory, filename)):
+            print('###### filesize mismatch, deleting {}'.format(os.path.join(directory, filename)))
+            dbc.del_file_by_name(os.path.join(directory, filename))
 dbc.conn.commit()
