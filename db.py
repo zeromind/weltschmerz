@@ -4,8 +4,7 @@ import sqlite3
 
 
 class Connection():
-    def __init__(self):
-        db = 'weltschmerz.sqlite3'
+    def __init__(self, db='weltschmerz.sqlite3'):
         self.conn = sqlite3.connect(db)
         self.cur = self.conn.cursor()
 
@@ -139,6 +138,10 @@ class Connection():
             'INSERT OR REPLACE INTO local_file (filename, directory, filesize, hash_crc, hash_md5, hash_sha1, hash_ed2k) VALUES (?,?,?,?,?,?,?)',
             data)
         self.conn.commit()
+
+    def get_file_hashed_by_path(self, directory, filename, filesize):
+        self.cur.execute('SELECT hash_crc, hash_md5, hash_sha1, hash_ed2k from local_file WHERE filename=:filename AND directory=:directory AND filesize=:filesize', {'filename': filename, 'directory': directory, 'filesize': filesize})
+        return self.cur.fetchall()[0]
 
     def shutdown(self):
         self.conn.commit()
