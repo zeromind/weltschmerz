@@ -175,3 +175,8 @@ class Connection():
 
     def del_file_by_name(self, directory, filename):
         self.cur.execute('DELETE FROM local_file WHERE filename=:filename AND directory=:directory', {'filename': filename, 'directory': directory})
+
+    def get_ed2k_links(self, directory):
+        self.cur.execute('SELECT filename, filesize, hash_ed2k from local_file WHERE directory=:directory ORDER BY filename', {'directory': directory})
+        ed2klinks = ['ed2k://|file|{}|{}|{}|/'.format(*file_info) for file_info in self.cur.fetchall()]
+        return ed2klinks
