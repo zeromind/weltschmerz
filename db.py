@@ -2,13 +2,14 @@
 
 import sqlite3
 
-class connection():
-        def __init__(self):
-                db = 'weltschmerz.sqlite3'
-                self.conn = sqlite3.connect(db)
-                self.cur = self.conn.cursor()
-        def initialise_db(self):
-                self.cur.executescript('''CREATE TABLE IF NOT EXISTS anime (
+
+class Connection():
+    def __init__(self, db='weltschmerz.sqlite3'):
+        self.conn = sqlite3.connect(db)
+        self.cur = self.conn.cursor()
+
+    def initialise_db(self):
+        self.cur.executescript('''CREATE TABLE IF NOT EXISTS anime (
                             aid           INT4     PRIMARY KEY
                                                    NOT NULL
                                                    UNIQUE,
@@ -39,7 +40,8 @@ class connection():
                             type       INT NOT NULL,
                             lang       VARCHAR NOT NULL,
                             title      VARCHAR NOT NULL,
-                            PRIMARY KEY (aid,type,lang)
+                            PRIMARY KEY (aid,type,lang),
+                            FOREIGN KEY (aid) REFERENCES anime(aid)
                 );
                 CREATE TABLE IF NOT EXISTS episode (
                             eid        INT     PRIMARY KEY
@@ -51,13 +53,16 @@ class connection():
                             length     INT,
                             title_en   VARCHAR NOT NULL,
                             title_jp   VARCHAR,
-                            title_jp_t VARCHAR
+                            title_jp_t VARCHAR,
+                            last_update DATETIME,
+                            FOREIGN KEY (aid) REFERENCES anime(aid)
                 );
                 CREATE TABLE IF NOT EXISTS file (
-                            filename    VARCHAR PRIMARY KEY
-                                                UNIQUE,
-                            filesize    INT     NOT NULL,
-                            fid         INT,
+                            fid         INT PRIMARY KEY
+                                            UNIQUE
+                                            NOT NULL,
+                            filesize    INT NOT NULL,
+                            original_filename    VARCHAR,
                             aid         INT,
                             eid         INT,
                             gid         INT,
@@ -72,7 +77,23 @@ class connection():
                             hash_sha1   VARCHAR,
                             hash_tth    VARCHAR,
                             hash_ed2k   VARCHAR NOT NULL,
-                            last_update DATETIME
+                            last_update DATETIME,
+                            FOREIGN KEY (aid) REFERENCES anime(aid),
+                            FOREIGN KEY (eid) REFERENCES episode(eid)
+                );
+                CREATE TABLE IF NOT EXISTS local_file (
+                            filename    VARCHAR NOT NULL,
+                            directory   VARCHAR NOT NULL,
+                            filesize    INT     NOT NULL,
+                            fid         INT,
+                            aid         INT,
+                            hash_crc    VARCHAR,
+                            hash_md5    VARCHAR,
+                            hash_sha1   VARCHAR,
+                            hash_tth    VARCHAR,
+                            hash_ed2k   VARCHAR NOT NULL,
+                            FOREIGN KEY (fid) REFERENCES file(fid),
+                            FOREIGN KEY (aid) REFERENCES anime(aid)
                 );
                 CREATE TABLE IF NOT EXISTS mylist (
                             ml_id       INT      PRIMARY KEY
@@ -85,46 +106,77 @@ class connection():
                             ml_viewdate DATETIME,
                             ml_storage  VARCHAR,
                             ml_source   VARCHAR,
-                            ml_other    VARCHAR
+                            ml_other    VARCHAR,
+                            FOREIGN KEY (fid) REFERENCES file(fid)
                 );
                 CREATE TABLE IF NOT EXISTS relation (
-                            aid         INT4 REFERENCES anime ( aid ),
-                            aid_related INT4 REFERENCES anime ( aid ),
-                            type        INT4
+                            aid         INT4 NOT NULL,
+                            aid_related INT4 NOT NULL,
+                            type        INT4,
+                            PRIMARY KEY (aid, aid_related),
+                            FOREIGN KEY (aid) REFERENCES anime(aid),
+                            FOREIGN KEY (aid_related) REFERENCES anime(aid)
                 );''')
-        def add_anime(self, data):#aid,year,type,eps,hep,seps,airdate,enddate,url,picname,rating,votecount,tempvote,tempvcount,avgreview,reviewcount,hrestricted,count_sp,count_other,count_trailer,count_parody,last_update
-                self.cur.execute('INSERT OR REPLACE INTO anime VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', data)
-        def add_anime_title(self, data):#aid,type,lang,title --  # type: 1=primary title (one per anime), 4=official title (one per language)
-                self.cur.execute('INSERT OR REPLACE INTO anime VALUES (?,?,?,?)', data)
-        def add_episode(self, data):#(eid,aid,ep,airdate,length,title_en,title_jp,title_jp_t)
-                self.cur.execute('INSERT OR REPLACE INTO episode VALUES (?,?,?,?,?,?,?,?)', data)
-        def add_file(self, data):#(filename,filesize,fid,aid,eid,gid,source,video_codec,resolution,extension,lang_audio,lang_subs,hash_crc,hash_md5,hash_sha1,hash_tth,hash_ed2k)
-                self.cur.execute('INSERT OR REPLACE INTO file VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', data)
-        def add_file_hashed(self, data):
-                self.cur.execute('INSERT OR REPLACE INTO file (filename, filesize, hash_crc, hash_md5, hash_sha1, hash_ed2k) VALUES (?,?,?,?,?,?)', data)
-                self.conn.commit();
-        def shutdown(self):
-                self.conn.commit()
-                self.conn.close()
-        def hashed_files(self):
-                self.cur.execute('SELECT filename FROM file')
-                files = [f[0] for f in self.cur.fetchall()]
-                return files
-        def hashed_files_size(self):
-                self.cur.execute('SELECT filename, filesize FROM file')
-                files = self.cur.fetchall()
-                return files
-        def get_dupes(self):
-                self.cur.execute('SELECT file.hash_sha1, file.filename FROM file WHERE (file.filesize, file.hash_crc, file.hash_md5, file.hash_ed2k, file.hash_sha1) in (select f.filesize, f.hash_crc, f.hash_md5, f.hash_ed2k, f.hash_sha1 from file as f group by f.hash_crc, f.hash_md5, f.hash_ed2k, f.hash_sha1 having count(*) >= 2)')
-                result = {}
-                for file in self.cur.fetchall():
-                        if file[0] in result:
-                                result[file[0]].append(file[1])
-                        else:
-                                result[file[0]] = [file[1]]
-                return result
-        def del_dupe(self, hash_sha1, filename):
-                self.cur.execute('DELETE FROM file WHERE hash_sha1=:hash_sha1 AND filename=:filename', {'hash_sha1': hash_sha1, 'filename': filename})
-        def del_file_by_name(self, filename):
-                self.cur.execute('DELETE FROM file WHERE filename=:filename', {'filename': filename})
 
+    def add_anime(self,
+                  data):  # aid,year,type,eps,hep,seps,airdate,enddate,url,picname,rating,votecount,tempvote,tempvcount,avgreview,reviewcount,hrestricted,count_sp,count_other,count_trailer,count_parody,last_update
+        self.cur.execute('INSERT OR REPLACE INTO anime VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', data)
+
+    def add_anime_title(self,
+                        data):  # aid,type,lang,title --  # type: 1=primary title (one per anime), 4=official title (one per language)
+        self.cur.execute('INSERT OR REPLACE INTO anime VALUES (?,?,?,?)', data)
+
+    def add_episode(self, data):  # (eid,aid,ep,airdate,length,title_en,title_jp,title_jp_t)
+        self.cur.execute('INSERT OR REPLACE INTO episode VALUES (?,?,?,?,?,?,?,?)', data)
+
+    def add_file(self,
+                 data):  # (fid,filesize,original_filename,aid,eid,gid,source,video_codec,resolution,extension,lang_audio,lang_subs,hash_crc,hash_md5,hash_sha1,hash_tth,hash_ed2k)
+        self.cur.execute('INSERT OR REPLACE INTO file VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', data)
+
+    def add_file_hashed(self, data):
+        self.cur.execute(
+            'INSERT OR REPLACE INTO local_file (filename, directory, filesize, hash_crc, hash_md5, hash_sha1, hash_ed2k) VALUES (?,?,?,?,?,?,?)',
+            data)
+        self.conn.commit()
+
+    def get_file_hashed_by_path(self, directory, filename, filesize):
+        self.cur.execute('SELECT hash_crc, hash_md5, hash_sha1, hash_ed2k from local_file WHERE filename=:filename AND directory=:directory AND filesize=:filesize', {'filename': filename, 'directory': directory, 'filesize': filesize})
+        return self.cur.fetchall()[0]
+
+    def shutdown(self):
+        self.conn.commit()
+        self.conn.close()
+
+    def hashed_files(self):
+        self.cur.execute('SELECT directory, filename FROM local_file')
+        files = [f for f in self.cur.fetchall()]
+        return files
+
+    def hashed_files_size(self):
+        self.cur.execute('SELECT directory, filename, filesize FROM local_file')
+        files = self.cur.fetchall()
+        return files
+
+    def get_dupes(self):
+        self.cur.execute(
+            'SELECT local_file.hash_sha1, local_file.directory, local_file.filename FROM local_file WHERE (local_file.filesize, local_file.hash_crc, local_file.hash_md5, local_file.hash_ed2k, local_file.hash_sha1) in (select f.filesize, f.hash_crc, f.hash_md5, f.hash_ed2k, f.hash_sha1 from local_file as f group by f.hash_crc, f.hash_md5, f.hash_ed2k, f.hash_sha1 having count(*) >= 2)')
+        result = {}
+        for dupe in self.cur.fetchall():
+            if dupe[0] in result:
+                result[dupe[0]].append(dupe[1:3])
+            else:
+                result[dupe[0]] = [dupe[1:3]]
+        return result
+
+    def del_dupe(self, hash_sha1, directory, filename):
+        self.cur.execute(
+            'DELETE FROM local_file WHERE hash_sha1=:hash_sha1 AND filename=:filename AND directory=:directory',
+            {'hash_sha1': hash_sha1, 'filename': filename, 'directory': directory})
+
+    def del_file_by_name(self, directory, filename):
+        self.cur.execute('DELETE FROM local_file WHERE filename=:filename AND directory=:directory', {'filename': filename, 'directory': directory})
+
+    def get_ed2k_links(self, directory):
+        self.cur.execute('SELECT filename, filesize, hash_ed2k from local_file WHERE directory=:directory ORDER BY filename', {'directory': directory})
+        ed2klinks = ['ed2k://|file|{}|{}|{}|/'.format(*file_info) for file_info in self.cur.fetchall()]
+        return ed2klinks
