@@ -34,5 +34,5 @@ if __name__ == '__main__':
             screenshot_file,
         ])
     except Exception as e:
-        logging.error('file not found, aborting... {}'.format(e))
+        logging.error('file \'${filename}\' found, aborting... {error}'.format(filename=os.path.basename(path), error=e))
         sys.exit(1)

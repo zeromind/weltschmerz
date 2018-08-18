@@ -36,14 +36,19 @@ def get_files(folders, hashed_files):
                         logging.warning(''.join(('skipped a file in ', os.path.abspath(dirpath))))
                     else:
                         real_path = os.path.realpath(os.path.abspath(dirpath))
-                        if (real_path, filename) in hashed_files:
-                            known_files.append((real_path, filename))
-                            continue
-                        elif (real_path, filename) in files:
-                            continue
+                        for excluded_folder in folders_exclude:
+                            if real_path.startswith(excluded_folder):
+                                print('skipping {}'.format(os.path.join(real_path, filename)))
+                                break
                         else:
-                            files.append((real_path, filename))
-                            qin[path].put((real_path, filename))
+                            if (real_path, filename) in hashed_files:
+                                known_files.append((real_path, filename))
+                                continue
+                            elif (real_path, filename) in files:
+                                continue
+                            else:
+                                files.append((real_path, filename))
+                                qin[path].put((real_path, filename))
 
     logging.info('{} files to hash for {}. skipping {} which had been hashed already'.format(len(set(files)),
                                                                                              ','.join(folders),

@@ -38,7 +38,7 @@ for i, (hash_sha1, files) in enumerate(dupes.items(), start=1):
                 if os.path.isfile(f):
                     print('deleting: {}'.format(f))
                     os.remove(f)
-                dbc.del_dupe(hash_sha1, os.path.split(selection)[0], os.path.split(selection)[1])
+                    dbc.del_dupe(hash_sha1, os.path.split(f)[0], os.path.split(f)[1])
                 dbc.conn.commit()
         else:
             filenames.remove(selection)

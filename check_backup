@@ -1,4 +1,22 @@
 #!/bin/bash
 backup="$@"
-[ ! -e "${backup%backup}" ] && [ -e "${backup}"  ] && mv "${backup}" "${backup%backup}" && exit 0
-[ $(stat -c '%s' "${backup}" "${backup%backup}" | sort -u | wc -l) -eq 1 ] && echo "backup size matches for ${backup%backup}, updating timestamps" && touch --date=@$(stat -c '%Y' "${backup}" "${backup%backup}" | sort -n | head -n1) "${backup}" "${backup%backup}" && [ $(sha512sum "${backup}" "${backup%backup}" | cut -d ' ' -f1 | sort -u | wc -l) -eq 1 ] && echo "sha512sum matches for ${backup%backup}, removing backup" && rm -v "${backup}"
+original="${backup%.backup}"
+if [ ! -e "${original}" ] && [ -e "${backup}"  ]; then
+    mv -v "${backup}" "${original}"
+    exit 0
+fi
+
+echo "${backup}: checking..."
+
+if [ $(stat -c '%s' "${backup}" "${original}" | sort -u | wc -l) -eq 1 ]; then
+    echo "backup size matches for ${original}, updating timestamps"
+    touch --date=@$(stat -c '%Y' "${backup}" "${original}" | sort -n | head -n1) "${backup}" "${original}"
+    if [ $(sha512sum "${backup}" "${original}" | cut -d ' ' -f1 | sort -u | wc -l) -eq 1 ];then
+        echo "sha512sum matches for ${original}, removing backup"
+        rm -v "${backup}"
+    else
+         echo "${backup}: sha256sum mismatch"
+    fi
+else
+    echo "${backup}: size mismatch"
+fi
