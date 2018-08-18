@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import pprint
+
 import xml.etree.ElementTree as ET
 import sys
 import os.path
@@ -28,7 +28,6 @@ def parse_file(filename):
 if __name__ == "__main__":
     import sys
 
-    pp = pprint.PrettyPrinter(indent=4)
     source_file = sys.argv[1]
     target_path = sys.argv[2]
     data = parse_file(source_file)
@@ -45,7 +44,7 @@ if __name__ == "__main__":
                     if not os.path.exists(os.path.join(target_path, 'by-name', title[0], title_sane)):
                         os.symlink(os.path.join('../..', 'by-id', aid_path), os.path.join(target_path, 'by-name', title[0], title_sane))
             for title in data[aid]:
-                if title[0] in ('official') and main_title_lang == ''.join(('x-', title[1], 't')):
+                if title[0] == 'official' and main_title_lang == ''.join(('x-', title[1], 't')):
                     title_sane = re.sub('\.$', '。', title[2].translate(str.maketrans('/', '⁄', ''.join(FN_BLACKLIST))))
                     if not os.path.exists(os.path.join(target_path, 'by-name', title[0], title_sane)):
-                         os.symlink(os.path.join('../..', 'by-id', aid_path), os.path.join(target_path, 'by-name', title[0], title_sane))
+                        os.symlink(os.path.join('../..', 'by-id', aid_path), os.path.join(target_path, 'by-name', title[0], title_sane))

@@ -19,6 +19,5 @@ version = 0
 database = weltschmerz.sqlite3
 log = weltschmerz.log
 fileextensions = 7z aac ac3 ace asf ass avi dts dtshd flac flv idx js lrc m2ts m4a mk3d mka mks mkv mov mp3 mp4 mpeg mpg ogg ogm ogv qt rar rm rmvb smi smil srt ssa sub sup swf thd ts tts wav webm wma wmv xss zip
-threads = 4
 folders = /hallon /syltburk /saltkar
 

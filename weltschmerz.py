@@ -15,22 +15,29 @@ import time
 
 config = configparser.ConfigParser()
 config.read_file(open('weltschmerz.cfg'))
-extensions = re.split(' ', config.get('client', 'fileextensions'))
 dbname = config.get('client', 'database', fallback='weltschmerz.sqlite3')
 logfile = config.get('client', 'log', fallback='weltschmerz.log')
-folders = re.split(' ', config.get('client', 'folders'))
 folders_exclude = re.split(' ', config.get('client', 'folders_exclude'))
-num_worker_threads = int(config.get('client', 'threads', fallback=4))
 logging.basicConfig(filename=logfile, format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--folders', nargs='*', help='folders to process',
+                    default=re.split(' ', config.get('client', 'folders')))
+parser.add_argument('--folders-exclude', nargs='*', help='folders to exclude',
+                    default=re.split(' ', config.get('client', 'folders_exclude')))
+parser.add_argument('--extensions', nargs='*', help='folders to process',
+                    default=re.split(' ', config.get('client', 'fileextensions')))
 
-def get_files(folders, hashed_files):
+args = parser.parse_args()
+
+
+def get_files(folders, hashed_files, exts):
     files = []
     known_files = []
     for path in folders:
         logging.info(''.join(('Scanning for files: ', path)))
-        for dirpath, dirnames, filenames in os.walk(path):
-            for ext in extensions:
+        for dirpath, dirnames, filenames in os.Kalk(path):
+            for ext in exts:
                 for filename in fnmatch.filter(filenames, ''.join(('*.', ext))):
                     if re.search('[\udcd7\udcb7]', filename):
                         logging.warning(''.join(('skipped a file in ', os.path.abspath(dirpath))))
@@ -88,6 +95,8 @@ def sql_worker():
 
 
 if __name__ == "__main__":
+    print(args.folders)
+    sys.exit(0)
     dbc = db_connect(dbname)
     hashed_files = dbc.hashed_files()
     logging.info('Closing database connection ({db})...'.format(db=dbname))
@@ -95,10 +104,12 @@ if __name__ == "__main__":
     qin = {}
     qout = queue.Queue()
     fi = {}
-    for f in folders:
+    for f in args.folders:
         qin[f] = queue.Queue()
 
-        fi[f] = threading.Thread(target=get_files, kwargs={'folders': [f], 'hashed_files': hashed_files})
+        fi[f] = threading.Thread(target=get_files, kwargs={'folders': [f],
+                                                           'hashed_files': hashed_files,
+                                                           'exts': args.extensions})
         fi[f].daemon = True
         fi[f].start()
 
