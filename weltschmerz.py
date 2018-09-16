@@ -36,7 +36,7 @@ def get_files(folders, hashed_files, exts):
     known_files = []
     for path in folders:
         logging.info(''.join(('Scanning for files: ', path)))
-        for dirpath, dirnames, filenames in os.Kalk(path):
+        for dirpath, dirnames, filenames in os.walk(path):
             for ext in exts:
                 for filename in fnmatch.filter(filenames, ''.join(('*.', ext))):
                     if re.search('[\udcd7\udcb7]', filename):
@@ -96,7 +96,6 @@ def sql_worker():
 
 if __name__ == "__main__":
     print(args.folders)
-    sys.exit(0)
     dbc = db_connect(dbname)
     hashed_files = dbc.hashed_files()
     logging.info('Closing database connection ({db})...'.format(db=dbname))

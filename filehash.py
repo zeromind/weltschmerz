@@ -5,9 +5,9 @@ import os.path
 import zlib
 import time
 from threading import Thread, Semaphore
+from io import BytesIO
 
-# Use the chunk size for calculating ed2k as block size
-BLOCKSIZE = 9728000
+BLOCKSIZE = 64 * 2 ** 20
 
 
 class T(Thread):
@@ -39,26 +39,42 @@ class Crc32:
 
 
 class Ed2k:
-    def __init__(self, file_size):
-        self.v = hashlib.new('md4')
-        self.file_size = file_size
+    def __init__(self):
+        self.block_size = 9728000
+        self.md4chunk = hashlib.new('md4')
+        self.md4chunk_pos = 0
+        self.md4list = []
 
-    def update(self, x):
-        if not (self.file_size < BLOCKSIZE):
-            md4data = hashlib.new('md4')
-            md4data.update(x)
-            self.v.update(md4data.digest())
+    def update(self, data=b''):
+        data_length = len(data)
+        b = BytesIO(data)
+        pos = 0
+        if data_length > 0:
+            while pos < data_length:
+                read_size = min(self.block_size - self.md4chunk_pos, data_length - pos)
+                self.md4chunk.update(b.read(read_size))
+                pos += read_size
+                self.md4chunk_pos += read_size
+                if self.block_size == self.md4chunk_pos:
+                    self.md4list.append(self.md4chunk.digest())
+                    self.md4chunk_pos = 0
+                    self.md4chunk = hashlib.new('md4')
         else:
-            self.v.update(x)
+            return
+        b.close()
 
     def hexdigest(self):
-        return self.v.hexdigest()
+        if len(self.md4list) > 0:
+            return hashlib.new('md4', b''.join(self.md4list) + self.md4chunk.digest()).hexdigest()
+        else:
+            return self.md4chunk.hexdigest()
 
 
 class FileHash:
-    def __init__(self, directory, filename):
+    def __init__(self, directory, filename, block_size=BLOCKSIZE):
         self.directory = directory
         self.filename = filename
+        self.block_size = block_size
         self.filesize = os.path.getsize(os.path.join(directory, filename))
         start = time.time()
         (self.crc32, self.md5, self.sha1, self.ed2k) = self.hash_file()
@@ -71,20 +87,20 @@ class FileHash:
             Returns file name, size, crc32, md5, sha1, ed2k.
             Uses the red variant of ed2k. Info: http://wiki.anidb.net/w/Ed2k-hash
         """
-        hashes = {'ed2k': Ed2k(self.filesize), 'sha1': hashlib.sha1(), 'md5': hashlib.md5(), 'crc32': Crc32()}
+        hashes = {'ed2k': Ed2k(), 'sha1': hashlib.sha1(), 'md5': hashlib.md5(), 'crc32': Crc32()}
         data = [b'']
         threads = [T(h, data) for n, h in hashes.items()]
         [t.start() for t in threads]
         with open(os.path.join(self.directory, self.filename), 'rb') as f:
             while True:
-                data.append(f.read(BLOCKSIZE))
+                data.append(f.read(self.block_size))
                 [t.idle.acquire() for t in threads]
                 del data[0]
                 [t.ready.release() for t in threads]
                 if not len(data[0]):
                     break
         [t.join() for t in threads]
-        return ([hashes[h].hexdigest() for h in ['crc32', 'md5', 'sha1', 'ed2k']])
+        return [hashes[h].hexdigest() for h in ['crc32', 'md5', 'sha1', 'ed2k']]
 
     def ed2k_link(self):
         return 'ed2k://|file|{file}|{size}|{ed2k}|/'.format(file=self.filename, size=self.filesize, ed2k=self.ed2k)
@@ -92,12 +108,20 @@ class FileHash:
 
 if __name__ == '__main__':
     import sys
+    import argparse
 
-    for filename in sys.argv[1:]:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--stats', action='store_true', default=False)
+    parser.add_argument('-b', '--block-size', dest='block_size', type=int, default=BLOCKSIZE)
+    parser.add_argument('files', nargs='+')
+    args = parser.parse_args()
+
+    for file in args.files:
         try:
-            file_info = FileHash(*os.path.split(filename))
+            file_info = FileHash(*os.path.split(file), block_size=args.block_size)
             print(file_info.ed2k_link())
-        except IndexError:
-            print('must specify a filename')
+            if args.stats:
+                print('{} MiB/s'.format(file_info.filesize / 1048576. / file_info.hash_duration), file=sys.stderr)
         except IOError as err:
-            print('error:', err)
+            print('error:', err, file=sys.stderr)
+            sys.exit(1)
