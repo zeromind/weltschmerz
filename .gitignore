@@ -1,6 +1,6 @@
 .idea
 weltschmerz.sqlite3*
 weltschmerz.cfg
-weltschmerz.log
+*.log
 __pycache__
 anime-titles*.xml

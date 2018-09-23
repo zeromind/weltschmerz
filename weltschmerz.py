@@ -7,7 +7,6 @@ import filehash
 import logging
 import os.path
 import re
-import sys
 import threading
 import queue
 import argparse
@@ -37,25 +36,31 @@ def get_files(folders, hashed_files, exts):
     for path in folders:
         logging.info(''.join(('Scanning for files: ', path)))
         for dirpath, dirnames, filenames in os.walk(path):
+            try:
+                dirpath.encode('utf-8')
+            except UnicodeEncodeError as e:
+                logging.warning('Skipping a folder in {folder}: {e}'.format(folder=os.path.dirname(dirpath), e=e))
+                continue
             for ext in exts:
                 for filename in fnmatch.filter(filenames, ''.join(('*.', ext))):
-                    if re.search('[\udcd7\udcb7]', filename):
-                        logging.warning(''.join(('skipped a file in ', os.path.abspath(dirpath))))
+                    try:
+                        filename.encode('utf-8')
+                    except UnicodeEncodeError as e:
+                        logging.warning('Skipping a file in {folder}: {e}'.format(folder=os.path.abspath(dirpath), e=e))
+                        continue
+                    real_path = os.path.realpath(os.path.abspath(dirpath))
+                    for excluded_folder in folders_exclude:
+                        if real_path.startswith(excluded_folder):
+                            logging.debug('Skipping {}'.format(os.path.join(real_path, filename)))
+                            break
+                    if (real_path, filename) in hashed_files:
+                        known_files.append((real_path, filename))
+                        continue
+                    elif (real_path, filename) in files:
+                        continue
                     else:
-                        real_path = os.path.realpath(os.path.abspath(dirpath))
-                        for excluded_folder in folders_exclude:
-                            if real_path.startswith(excluded_folder):
-                                print('skipping {}'.format(os.path.join(real_path, filename)))
-                                break
-                        else:
-                            if (real_path, filename) in hashed_files:
-                                known_files.append((real_path, filename))
-                                continue
-                            elif (real_path, filename) in files:
-                                continue
-                            else:
-                                files.append((real_path, filename))
-                                qin[path].put((real_path, filename))
+                        files.append((real_path, filename))
+                        qin[path].put((real_path, filename))
 
     logging.info('{} files to hash for {}. skipping {} which had been hashed already'.format(len(set(files)),
                                                                                              ','.join(folders),
@@ -80,7 +85,7 @@ def parser(folder):
         end = time.time()
         data = (fhash.filename, fhash.directory, fhash.filesize, fhash.crc32, fhash.md5, fhash.sha1, fhash.ed2k)
         qout.put(data)
-        logging.info('hashed: {file} {size}MB @ {speed}MB/s'.format(file=os.path.join(directory, filename),
+        logging.info('Hashed: {file} {size}MB @ {speed}MB/s'.format(file=os.path.join(directory, filename),
                                                                     size=(fhash.filesize / 1048576.),
                                                                     speed=(fhash.filesize / 1048576. / (end - start))))
         qin[folder].task_done()
@@ -125,4 +130,4 @@ if __name__ == "__main__":
     for f, q in qin.items():
         q.join()
     qout.join()
-    logging.info('hashed: em all')
+    logging.info('Hashed: em all')
