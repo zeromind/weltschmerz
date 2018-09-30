@@ -39,16 +39,16 @@ if __name__ == '__main__':
         target_folder = os.path.join('/anime/screenshots/', re.search('(by-id(/[0-9]{2}){3})', real_path).group(1))
         target_file = os.path.join(target_folder, os.path.basename(screenshot_file))
         if os.path.isfile(target_file):
-            logging.info('screenshot \'{target_file}\' already present, deleting \'{screenshot}\'...'.format(
+            logging.warning('screenshot \'{target_file}\' already present, deleting \'{screenshot}\'...'.format(
                 target_file=target_file,
                 screenshot=screenshot_file)
             )
             os.unlink(screenshot_file)
         else:
-            shutil.move(screenshot_file, target_folder)
+            logging.info('found anime id, moving file to \'{target_folder}\'...'.format(target_folder=target_folder))
+            os.makedirs(os.path.abspath(target_folder), exist_ok=True)
+            shutil.move(screenshot_file, target_file)
 
     except Exception as e:
-        logging.info('found anime id, moving file to \'{target_folder}\'...'.format(target_folder=target_folder))
-        target_file = os.path.join(target_folder, os.path.basename(screenshot_file))
         logging.error('\'{filename}\' not found, aborting... {error}'.format(filename=os.path.basename(path), error=e))
         sys.exit(1)
