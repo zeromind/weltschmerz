@@ -6,6 +6,7 @@ import pyselect
 import sys
 import filehash
 import difflib
+import datetime
 
 dbc = db.Connection()
 dupes = dbc.get_dupes()
@@ -32,10 +33,14 @@ for i, (hash_sha1, files) in enumerate(dupes.items(), start=1):
         continue
     if os.path.isfile(selection):
         if filehash.FileHash(os.path.split(selection)[0], os.path.split(selection)[1]).hash_file()[2] == hash_sha1:
-            print('sha1 matches, removing dupes')
+            print('sha1 matches: setting atime/mtime to oldest and removing dupes')
             filenames.remove(selection)
             for f in filenames:
                 if os.path.isfile(f):
+                    mtime = os.path.getmtime(f)
+                    if os.path.getmtime(selection) > mtime:
+                        print('setting atime/mtime to {mtime}'.format(mtime=datetime.datetime.fromtimestamp(mtime).isoformat()))
+                        os.utime(selection, (mtime, mtime))
                     print('deleting: {}'.format(f))
                     os.remove(f)
                     dbc.del_dupe(hash_sha1, os.path.split(f)[0], os.path.split(f)[1])
