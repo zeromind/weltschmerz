@@ -17,12 +17,12 @@ config.read_file(open('weltschmerz.cfg'))
 dbname = config.get('client', 'database', fallback='weltschmerz.sqlite3')
 logfile = config.get('client', 'log', fallback='weltschmerz.log')
 folders_exclude = re.split(' ', config.get('client', 'folders_exclude'))
-logging.basicConfig(filename=logfile, format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(filename=logfile, format='%(asctime)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--folders', nargs='*', help='folders to process',
                     default=re.split(' ', config.get('client', 'folders')))
-parser.add_argument('--folders-exclude', nargs='*', help='folders to exclude',
+parser.add_argument('--folders-exclude', dest='folders_exclude', nargs='*', help='folders to exclude',
                     default=re.split(' ', config.get('client', 'folders_exclude')))
 parser.add_argument('--extensions', nargs='*', help='folders to process',
                     default=re.split(' ', config.get('client', 'fileextensions')))
@@ -30,12 +30,16 @@ parser.add_argument('--extensions', nargs='*', help='folders to process',
 args = parser.parse_args()
 
 
-def get_files(folders, hashed_files, exts):
+def get_files(folders, folders_exclude, hashed_files, exts):
+    print(folders_exclude)
     files = []
     known_files = []
     for path in folders:
         logging.info(''.join(('Scanning for files: ', path)))
         for dirpath, dirnames, filenames in os.walk(path):
+            if os.path.abspath(dirpath).startswith(tuple(folders_exclude)):
+                logging.debug('Skipping {}'.format(os.path.abspath(dirpath)))
+                continue
             try:
                 dirpath.encode('utf-8')
             except UnicodeEncodeError as e:
@@ -49,10 +53,6 @@ def get_files(folders, hashed_files, exts):
                         logging.warning('Skipping a file in {folder}: {e}'.format(folder=os.path.abspath(dirpath), e=e))
                         continue
                     real_path = os.path.realpath(os.path.abspath(dirpath))
-                    for excluded_folder in folders_exclude:
-                        if real_path.startswith(excluded_folder):
-                            logging.debug('Skipping {}'.format(os.path.join(real_path, filename)))
-                            break
                     if (real_path, filename) in hashed_files:
                         known_files.append((real_path, filename))
                         continue
@@ -112,6 +112,7 @@ if __name__ == "__main__":
         qin[f] = queue.Queue()
 
         fi[f] = threading.Thread(target=get_files, kwargs={'folders': [f],
+                                                           'folders_exclude': args.folders_exclude,
                                                            'hashed_files': hashed_files,
                                                            'exts': args.extensions})
         fi[f].daemon = True
