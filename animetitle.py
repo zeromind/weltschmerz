@@ -48,3 +48,7 @@ if __name__ == "__main__":
                     title_sane = re.sub('\.$', '。', title[2].translate(str.maketrans('/', '⁄', ''.join(FN_BLACKLIST))))
                     if not os.path.exists(os.path.join(target_path, 'by-name', title[0], title_sane)):
                         os.symlink(os.path.join('../..', 'by-id', aid_path), os.path.join(target_path, 'by-name', title[0], title_sane))
+                if title[0] == 'official' and title[1] == 'en':
+                    title_sane = re.sub('\.$', '。', title[2].translate(str.maketrans('/', '⁄', ''.join(FN_BLACKLIST))))
+                    if not os.path.exists(os.path.join(target_path, 'by-name', 'english', title_sane)):
+                        os.symlink(os.path.join('../..', 'by-id', aid_path), os.path.join(target_path, 'by-name', 'english', title_sane))
