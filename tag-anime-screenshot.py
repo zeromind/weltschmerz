@@ -19,7 +19,7 @@ def get_config(config_file='weltschmerz.cfg'):
     parser.add_argument('--database', help='database to use',
                         default=config.get('tag-screenshot', 'database'))
     parser.add_argument('--log-file', dest='log_file', help='logfile to use',
-                        default='tag-anime-screenshot.log')
+                        default=config.get('tag-screenshot', 'logfile'))
     parser.add_argument('-S', '--screenshot-file', help='screenshot file to tag',
                         default=None, dest='screenshot_file')
     parser.add_argument('-F', '--file-path', help='file to query for',
@@ -33,7 +33,7 @@ def get_config(config_file='weltschmerz.cfg'):
     parser.add_argument('-T', '--timepos-raw', help='timepos (raw) of screenshot',
                         default=None, dest='timepos_raw')
     parser.add_argument('-B', '--target-basedir', help='timepos (raw) of screenshot',
-                        dest='target_basedir')
+                        default=config.get('tag-screenshot', 'basedir'), dest='target_basedir')
 
     args = parser.parse_args()
     logging.basicConfig(filename=args.log_file,
