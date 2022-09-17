@@ -2,12 +2,11 @@
 
 import anime
 import os.path
-import logging
 import configparser
 import argparse
 
 
-def get_config(config_file='weltschmerz.cfg'):
+def get_config(config_file: str = 'weltschmerz.cfg'):
     config = configparser.ConfigParser()
     config.read_file(open(config_file))
 
@@ -19,10 +18,10 @@ def get_config(config_file='weltschmerz.cfg'):
                         default=config.get('client', 'log'))
     parser.add_argument('--folder', help='folder to query',
                         default=None)
+    parser.add_argument('--dry-run', '-n', help='dry-run, no removing deleted files',
+                        default=False, dest='dry_run', action='store_true')
 
     args = parser.parse_args()
-    logging.basicConfig(filename=args.log_file,
-                        format='%(asctime)s - %(levelname)s - %(message)s', level=logging.DEBUG)
     return args
 
 
@@ -36,9 +35,14 @@ if __name__ == "__main__":
 
     print(len(known_files))
     for known_file in known_files:
-        if not os.path.isfile(known_file.full_path()):
-            print(f'###### removing {known_file.full_path()}')
-            dbs.session.delete(known_file)
+        if not os.path.isfile(known_file.full_path):
+            print(f'###### removing {known_file.full_path}')
+            if not config.dry_run:
+                dbs.session.delete(known_file)
+            else:
+                print('##### INFO: dry-run requested, not removing deleted file')
         else:
-            print(f'###### found {known_file.full_path()}')
-    dbs.session.commit()
+            continue
+            print(f'###### found {known_file.full_path}')
+    if not config.dry_run:
+        dbs.session.commit()

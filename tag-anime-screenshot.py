@@ -10,7 +10,7 @@ import configparser
 import argparse
 
 
-def get_config(config_file='weltschmerz.cfg'):
+def get_config(config_file=os.path.expanduser('~/.config/weltschmerz/weltschmerz.cfg')):
     config = configparser.ConfigParser()
     config.read_file(open(config_file))
 

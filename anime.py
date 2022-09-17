@@ -96,9 +96,11 @@ class LocalFile(Base):
               'filename', 'filesize', unique=True),
         Index('idx_local_file_hash_ed2k', 'hash_ed2k', 'filesize', unique=False),
     )
-    def ed2k_link(self):
+    @property
+    def ed2k_link(self) -> str:
         return f'ed2k://|file|{self.filename}|{self.filesize}|{self.hash_ed2k}|/'
-    def full_path(self):
+    @property
+    def full_path(self) -> str:
         return os.path.join(self.directory, self.filename)
 
 
