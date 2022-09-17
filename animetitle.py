@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+# import anime titles from an AniDB title dump
+# create filesystem hierarchy from AniDB title dump
+# see https://wiki.anidb.net/API#Anime_Titles
+# usage: animetitle.py <titledump> <target_folder>
 
 import xml.etree.ElementTree as ET
 import sys

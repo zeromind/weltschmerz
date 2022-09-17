@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 
 import anime
-import logging
 import configparser
 import argparse
+import re
+from typing import Dict, List
 
 def get_config(config_file='weltschmerz.cfg'):
     config = configparser.ConfigParser()
@@ -19,22 +20,22 @@ def get_config(config_file='weltschmerz.cfg'):
                         default=None)
 
     args = parser.parse_args()
-    logging.basicConfig(filename=args.log_file,
-                        format='%(asctime)s - %(levelname)s - %(message)s', level=logging.DEBUG)
     return args
 
 
 if __name__ == "__main__":
     config = get_config()
     dbs = anime.DatabaseSession(config.database, False)
+    unknown_files: List[anime.LocalFile]
     if config.folder:
       unknown_files = dbs.session.query(anime.LocalFile).outerjoin(anime.File, anime.LocalFile.hash_ed2k==anime.File.hash_ed2k).filter(anime.File.hash_ed2k == None, anime.LocalFile.directory == config.folder.rstrip('/')).order_by(anime.LocalFile.directory, anime.LocalFile.filename).all()
-      [ print(unknown_file.ed2k_link()) for unknown_file in unknown_files]
+      for unknown_file in unknown_files:
+        print(unknown_file.ed2k_link())
     else:
       unknown_files = dbs.session.query(anime.LocalFile).outerjoin(anime.File, anime.LocalFile.hash_ed2k==anime.File.hash_ed2k).filter(anime.File.hash_ed2k == None).order_by(anime.LocalFile.directory, anime.LocalFile.filename).all()
-      folders = {}
+      folders: Dict[str, int]= {}
       for local_file in unknown_files:
-        if local_file.hash_crc in local_file.filename.casefold():
+        if local_file.hash_crc in local_file.filename.casefold() and not re.match(r'.*/by-id/\d\d/\d\d/\d\d', local_file.directory):
           if local_file.directory not in folders.keys():
             folders[local_file.directory] = 0
           folders[local_file.directory] += 1

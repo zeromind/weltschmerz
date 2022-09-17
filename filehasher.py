@@ -7,6 +7,7 @@ import re
 import configparser
 import argparse
 import logging
+from typing import List, Tuple
 
 
 def get_config(config_file='weltschmerz.cfg'):
@@ -59,6 +60,8 @@ class FileHasher():
                         continue
                     elif (real_path, filename) in files:
                         continue
+                    elif os.path.islink(os.path.join(real_path, filename)):
+                        continue
                     else:
                         print(f'found {os.path.join(real_path, filename)}')
                         files.append((real_path, filename))
@@ -69,7 +72,7 @@ class FileHasher():
 if __name__ == "__main__":
     config = get_config()
     hasher = FileHasher(config.database, False)
-    files = hasher.get_files(config.folders, config.folders_exclude, config.foldernames_exclude, config.extensions)
+    files: List[Tuple[str, str]] = hasher.get_files(config.folders, config.folders_exclude, config.foldernames_exclude, config.extensions)
     print(len(files))
     for directory, filename in files:
         fhash = filehash.FileHash(directory, filename)

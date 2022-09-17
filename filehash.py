@@ -6,6 +6,7 @@ import zlib
 import time
 from threading import Thread, Semaphore
 from io import BytesIO
+from typing import List
 
 BLOCKSIZE = 64 * 2 ** 20
 
@@ -71,11 +72,11 @@ class Ed2k:
 
 
 class FileHash:
-    def __init__(self, directory, filename, block_size=BLOCKSIZE):
-        self.directory = directory
-        self.filename = filename
-        self.block_size = block_size
-        self.filesize = os.path.getsize(os.path.join(directory, filename))
+    def __init__(self, directory: str, filename: str, block_size=BLOCKSIZE):
+        self.directory: str = directory
+        self.filename: str = filename
+        self.block_size: int = block_size
+        self.filesize: int = os.path.getsize(os.path.join(directory, filename))
         start = time.time()
         (self.crc32, self.md5, self.sha1, self.ed2k) = self.hash_file()
         end = time.time()
@@ -102,8 +103,8 @@ class FileHash:
         [t.join() for t in threads]
         return [hashes[h].hexdigest() for h in ['crc32', 'md5', 'sha1', 'ed2k']]
 
-    def ed2k_link(self):
-        return 'ed2k://|file|{file}|{size}|{ed2k}|/'.format(file=self.filename, size=self.filesize, ed2k=self.ed2k)
+    def ed2k_link(self) -> str:
+        return f'ed2k://|file|{self.filename}|{self.filesize}|{self.ed2k}|/'
 
 
 if __name__ == '__main__':
