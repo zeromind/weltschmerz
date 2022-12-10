@@ -42,7 +42,8 @@ if __name__ == '__main__':
     print(len(known_files))
     # sys.exit(0)
     for local_file in known_files:
-      aid_padded = str(local_file.file.aid).zfill(AID_PAD_WIDTH)
+      known_file = dbs.session.query(anime.File).filter(anime.File.hash_ed2k==local_file.hash_ed2k).one()
+      aid_padded = str(known_file.aid).zfill(AID_PAD_WIDTH)
       aid_path = os.path.join(*[aid_padded[i:i+AID_CHUNK_SIZE] for i in range(0, AID_PAD_WIDTH, AID_CHUNK_SIZE)])
       target_dir = os.path.join(config.target_basedir, 'by-id', aid_path)
       if local_file.directory not in [target_dir]:
