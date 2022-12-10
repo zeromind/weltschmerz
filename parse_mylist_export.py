@@ -1,15 +1,5 @@
 #!/usr/bin/python3
 
-# from lxml import etree
-# import sys
-
-# with open(sys.argv[1], 'r') as f:
-#     anime_data = etree.parse(f)
-#     for anime in anime_data.iter('anime'):
-#         mylist = {}
-#         mylist['count'] = {}
-#         print(etree.tostring(anime))
-
 import xmltodict
 import sys
 import anime
@@ -36,12 +26,6 @@ def get_config(config_file: str = 'weltschmerz.cfg'):
     args = parser.parse_args()
     return args
 
-#   <mylist_entry>
-#     <count eps="13" specials="0" total="13" />
-#     <watched eps="0" specials="0" total="0" />
-#     <unwatched eps="13" specials="0" total="13" />
-#     <size normal="32.440.147.904" formated="30.21 GB" />
-
 
 def xml_parser():
     while True:
@@ -50,6 +34,7 @@ def xml_parser():
                 anime_data = xmltodict.parse(anime_xml)
                 q_out.put(anime_data)
                 q_in.task_done()
+
 
 def dict_to_mylist_anime_worker():
     while True:
@@ -97,5 +82,3 @@ if __name__ == "__main__":
 
     q_in.join()
     q_out.join()
-
-    dbs.session.commit()
