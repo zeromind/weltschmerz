@@ -1,6 +1,6 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
-from sqlalchemy import Column, Integer, BigInteger, String, Date, Boolean, ForeignKey, Index
+from sqlalchemy import Column, Integer, BigInteger, String, Date, Boolean, ForeignKey, Index, Float
 from sqlalchemy.orm import sessionmaker
 import os.path
 
@@ -10,8 +10,8 @@ Base = declarative_base()
 class Anime(Base):
     __tablename__ = 'anime'
     aid = Column(Integer, unique=True, primary_key=True, default=None)
-    year = Column(Integer)
-    type = Column(String)
+    year = Column(String)
+    type = Column(Integer)
     eps = Column(Integer)
     hep = Column(Integer)
     seps = Column(Integer)
@@ -19,11 +19,11 @@ class Anime(Base):
     enddate = Column(Date)
     url = Column(String)
     picname = Column(String)
-    rating = Column(Integer)
+    rating = Column(Float)
     votecount = Column(Integer)
-    tempvote = Column(Integer)
+    tempvote = Column(Float)
     tempvcount = Column(Integer)
-    avgreview = Column(Integer)
+    avgreview = Column(Float)
     reviewcount = Column(Integer)
     hrestricted = Column(Boolean)
     count_sp = Column(Integer)
@@ -45,7 +45,7 @@ class Episode(Base):
     __tablename__ = 'episode'
     eid = Column(Integer, primary_key=True, default=None)
     aid = Column(Integer, ForeignKey('anime.aid'))
-    ep = Column(Integer)
+    ep = Column(String)
     airdate = Column(Date)
     length = Column(Integer)
     title_en = Column(String)
@@ -115,6 +115,34 @@ class MylistFile(Base):
     ml_source = Column(String)
     ml_other = Column(String)
 
+
+class MylistAnime(Base):
+    __tablename__ = 'mylist_anime'
+    aid = Column(Integer, ForeignKey('anime.aid'), nullable=False, primary_key=True)
+    ml_count_episodes = Column(Integer)
+    ml_count_specials = Column(Integer)
+    ml_count_total = Column(Integer)
+    ml_watched_episodes = Column(Integer)
+    ml_watched_specials = Column(Integer)
+    ml_watched_total = Column(Integer)
+    @property
+    def ml_watched_ratio_total(self) -> float:
+        if 0 in [self.ml_watched_total, self.ml_count_total]:
+            return 0
+        else:
+            return self.ml_watched_total / self.ml_count_total
+    @property
+    def ml_watched_ratio_episodes(self) -> float:
+        if 0 in [self.ml_watched_episodes, self.ml_count_episodes]:
+            return 0
+        else:
+            return self.ml_watched_episodes / self.ml_count_episodes
+    @property
+    def ml_watched_ratio_specials(self) -> float:
+        if 0 in [self.ml_watched_specials, self.ml_count_specials]:
+            return 0
+        else:
+            return self.ml_watched_specials / self.ml_count_specials
 
 class DatabaseSession():
     def __init__(self, db='sqlite:///:memory:', echo=False):
