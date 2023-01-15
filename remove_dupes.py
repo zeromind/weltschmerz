@@ -9,6 +9,8 @@ import anime
 from sqlalchemy import func
 import argparse
 import configparser
+import sys
+import re
 
 
 def get_config(config_file: str = 'weltschmerz.cfg'):
@@ -21,6 +23,7 @@ def get_config(config_file: str = 'weltschmerz.cfg'):
                         default=config.get('client', 'database'))
     parser.add_argument('--log-file', dest='log_file', help='logfile to use',
                         default=config.get('client', 'log'))
+    parser.add_argument('--preferred-directory-pattern', dest='preferred_directory_pattern', help='on duplicates with only one filename, prefer to keep files in directory matching the pattern')
     parser.add_argument('--dry-run', '-n', help='dry-run, no removing deleted files',
                         default=False, dest='dry_run', action='store_true')
 
@@ -47,19 +50,28 @@ if __name__ == '__main__':
     config = get_config()
     dbs = anime.DatabaseSession(config.database, False)
     known_dupes = dbs.session.query(anime.LocalFile.hash_ed2k, anime.LocalFile.filesize).group_by(anime.LocalFile.hash_ed2k, anime.LocalFile.filesize).having(func.count() >= 2).all()
-    print(known_dupes)
+    #print(known_dupes)
+    #sys.exit(1)
     for i, (hash_ed2k, filesize) in enumerate(known_dupes, start=1):
         known_files = dbs.session.query(anime.LocalFile).filter(anime.LocalFile.hash_ed2k==hash_ed2k, anime.LocalFile.filesize==filesize).order_by(anime.LocalFile.filename, anime.LocalFile.directory).all()
 
         print("\n" * 8 + '#' * 128 + "\n")
         available_files = update_mtimes(known_files)
-        if len(available_files) <=2:
+        if len(available_files) <= 1:
             continue
         print('[ {current:05} / {total:05} ]'.format(current=i, total=len(known_dupes)))
         file_names = list(set([available_file.filename for available_file in available_files]))
         print(file_names)
         if len(file_names) == 1:
             selection = available_files[0]
+            # keep files from directory matching preferred pattern
+            if config.preferred_directory_pattern:
+                print('preferred pattern found')
+                for available_file in available_files:
+                    if re.match(config.preferred_directory_pattern, available_file.directory):
+                        print(f'selecting file from preferred location: "{available_file.directory}" - "{available_file.filename}"')
+                        selection = available_file
+                        break
             print('File to keep:')
             print(f'{selection.filename} ({selection.directory})')
         else:

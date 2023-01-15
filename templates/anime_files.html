@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Files for anime {{ anime_id }}</title>
+    <link rel="stylesheet" href="/anime/style.css" type="text/css" title="Style">
+</head>
+<body>
+    <table id="files">
+        <thead>
+            <tr>
+                <th class="filename">filename</th>
+                <th class="actions"></th>
+                <th class="filesize">size</th>
+                <th class="hash crc32">crc32</th>
+                <th class="hash ed2k">ed2k</th>
+                <th class="hash md5">md5</th>
+            </tr>
+        </thead>
+        <tbody>
+            {%- for file in files %}
+            <tr class="file">
+                <td class="filename"><wa href="{{ baseurl }}/{{ file.filename }}">{{ file.filename }}</a></td>
+                <td class="actions">{% if file.hash_ed2k %}<a href="mpv-ed2k://{{ file.hash_ed2k }}" class="action mpv" title="play in mpv">▶</a>{% endif %}</td>
+                <td class="filesize">{{ file.filesize or '' }}</td>
+                <td class="hash crc32">{{ file.hash_crc or '' }}</td>
+                <td class="hash ed2k">{{ file.hash_ed2k or '' }}</td>
+                <td class="hash md5">{{ file.hash_md5 or '' }}</td>
+            </tr>
+            {%- endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
