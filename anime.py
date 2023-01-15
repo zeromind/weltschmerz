@@ -1,10 +1,31 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, BigInteger, String, Date, Boolean, ForeignKey, Index, Float
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 import os.path
 
 Base = declarative_base()
+
+class Episode(Base):
+    __tablename__ = 'episode'
+    eid = Column(Integer, primary_key=True, default=None)
+    aid = Column(Integer, ForeignKey('anime.aid'))
+    ep = Column(String)
+    airdate = Column(Date)
+    length = Column(Integer)
+    title_en = Column(String)
+    title_jp = Column(String)
+    title_jp_t = Column(String)
+    last_update = Column(Date)
+    anime =  relationship('Anime', back_populates='episodes')
+
+
+class AnimeTitle(Base):
+    __tablename__ = 'anime_title'
+    aid = Column(Integer, ForeignKey('anime.aid'))
+    type = Column(Integer, nullable=False, primary_key=True)
+    lang = Column(String, nullable=False, primary_key=True)
+    title = Column(String, nullable=False, primary_key=True)
 
 
 class Anime(Base):
@@ -31,27 +52,13 @@ class Anime(Base):
     count_trailer = Column(Integer)
     count_parody = Column(Integer)
     last_update = Column(Date)
-
-
-class AnimeTitle(Base):
-    __tablename__ = 'anime_title'
-    aid = Column(Integer, ForeignKey('anime.aid'))
-    type = Column(Integer, nullable=False, primary_key=True)
-    lang = Column(String, nullable=False, primary_key=True)
-    title = Column(String, nullable=False, primary_key=True)
-
-
-class Episode(Base):
-    __tablename__ = 'episode'
-    eid = Column(Integer, primary_key=True, default=None)
-    aid = Column(Integer, ForeignKey('anime.aid'))
-    ep = Column(String)
-    airdate = Column(Date)
-    length = Column(Integer)
-    title_en = Column(String)
-    title_jp = Column(String)
-    title_jp_t = Column(String)
-    last_update = Column(Date)
+    episodes = relationship(Episode, lazy="immediate")
+    @property
+    def eps_total(self):
+        return len(self.episodes)
+    @property
+    def runtime(self) -> int:
+        return sum([episode.length for episode in self.episodes if episode.length])
 
 
 class File(Base):
