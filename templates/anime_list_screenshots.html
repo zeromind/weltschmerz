@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>List of anime with screenshots</title>
+    <link rel="stylesheet" href="/anime/style.css" type="text/css" title="Style" />
+    <script src="/anime/sorttable.js"></script>
+</head>
+<body>
+    <table id="anime" class="sortable">
+        <thead>
+            <tr>
+                <th class="anime">anime</th>
+            </tr>
+        </thead>
+        <tbody>
+            {%- for anime_entry in anime_list %}
+            <tr class="anime">
+                <td class="anime"><a href="/screenshots/{{ anime_entry.aid }}">{{ anime_entry.aid }}</a></td>
+            </tr>
+            {%- endfor %}
+        </tbody>
+    </table>
+    <footer>
+        <p>
+            Anime data is from <a href="https://anidb.net">AniDB</a>, which is licensed under a <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+        </p>
+    </footer>
+</body>
+</html>

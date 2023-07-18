@@ -2,6 +2,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, BigInteger, String, Date, Boolean, ForeignKey, Index, Float
 from sqlalchemy.orm import sessionmaker, relationship
+import sqlalchemy.sql.functions
 import os.path
 
 Base = declarative_base()
@@ -10,7 +11,7 @@ class Episode(Base):
     __tablename__ = 'episode'
     eid = Column(Integer, primary_key=True, default=None)
     aid = Column(Integer, ForeignKey('anime.aid'))
-    ep = Column(String)
+    ep = Column(String(collation='numeric'))
     airdate = Column(Date)
     length = Column(Integer)
     title_en = Column(String)
@@ -18,6 +19,7 @@ class Episode(Base):
     title_jp_t = Column(String)
     last_update = Column(Date)
     anime =  relationship('Anime', back_populates='episodes')
+    screenshots = relationship('TitleScreenShot', lazy="immediate")
 
 
 class AnimeTitle(Base):
@@ -52,13 +54,16 @@ class Anime(Base):
     count_trailer = Column(Integer)
     count_parody = Column(Integer)
     last_update = Column(Date)
-    episodes = relationship(Episode, lazy="immediate")
+    episodes = relationship(Episode) #lazy="immediate")
     @property
     def eps_total(self):
         return len(self.episodes)
     @property
     def runtime(self) -> int:
         return sum([episode.length for episode in self.episodes if episode.length])
+    @property
+    def screenshots(self):
+        return sqlalchemy.sql.functions.sum(self.episodes.screenshots)
 
 
 class File(Base):
@@ -98,6 +103,7 @@ class LocalFile(Base):
     hash_sha1 = Column(String)
     hash_tth = Column(String)
     hash_ed2k = Column(String, nullable=False)
+    #screenshots = relationship('TitleScreenShot', foreign_keys=['fid'], lazy="immediate")
     __table_args__ = (
         Index('idx_local_file_path_size', 'directory',
               'filename', 'filesize', unique=True),
@@ -114,7 +120,7 @@ class LocalFile(Base):
 class MylistFile(Base):
     __tablename__ = 'mylist'
     ml_id = Column(BigInteger, nullable=False, primary_key=True, default=None)
-    fid = Column(BigInteger, ForeignKey('file.fid'), nullable=False)
+    fid = Column(Integer, ForeignKey('file.fid'), nullable=False)
     ml_state = Column(Integer, nullable=False)
     ml_viewed = Column(Integer)
     ml_viewdate = Column(Date)
@@ -150,6 +156,29 @@ class MylistAnime(Base):
             return 0
         else:
             return self.ml_watched_specials / self.ml_count_specials
+
+
+class TitleScreenShot(Base):
+    __tablename__ = 'title_screenshot'
+    filename = Column(String, nullable=False, primary_key=True)
+    aid = Column(Integer, ForeignKey('anime.aid'))
+    eid = Column(Integer, ForeignKey('episode.eid'))
+    fid = Column(Integer, ForeignKey('file.fid'))
+    
+    time_position = Column(String, nullable=False)
+    time_position_raw = Column(Float, nullable=False)
+    title_type = Column(Integer)
+    source_file_source = Column(String)
+    source_file_duration = Column(String)
+    source_file_duration_raw = Column(Float)
+    source_file_name = Column(String)
+    source_file_size = Column(BigInteger, nullable=False)
+    source_file_hash_crc = Column(String)
+    source_file_hash_md5 = Column(String)
+    source_file_hash_sha1 = Column(String)
+    source_file_hash_tth = Column(String)
+    source_file_hash_ed2k = Column(String, nullable=False)
+    episode = relationship('Episode', back_populates='screenshots')
 
 class DatabaseSession():
     def __init__(self, db='sqlite:///:memory:', echo=False):

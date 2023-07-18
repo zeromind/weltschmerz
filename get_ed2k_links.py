@@ -3,9 +3,10 @@
 import anime
 import configparser
 import argparse
+import os.path
 
 
-def get_config(config_file: str = 'weltschmerz.cfg'):
+def get_config(config_file: str = os.path.expanduser('~/.config/weltschmerz/weltschmerz.cfg')):
     config = configparser.ConfigParser()
     config.read_file(open(config_file))
 
