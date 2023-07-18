@@ -34,9 +34,14 @@ def file_by_ed2k(ed2k: str):
 @app.route('/screenshots/<int:anime_id>', methods=['GET'])
 def screenshots(anime_id: int = None) -> str:
     if anime_id == None:
-        return 'anime list'
+        anime_list = dbs.session.query(anime.TitleScreenShot).join(anime.Anime).distinct(anime.Anime.aid).join(anime.Episode).all()
+        return render_template('anime_list_screenshots.html', anime_list=anime_list)
     else:
-        return f'foobar {anime_id}'
+        show_source_details = request.args.get('details', default = 0, type=int)
+        (directory, baseurl) = get_screenshot_path(anime_id)
+        screenshots = dbs.session.query(anime.TitleScreenShot).filter_by(
+        aid=anime_id).join(anime.Episode).order_by(anime.Episode.ep, anime.TitleScreenShot.time_position, anime.TitleScreenShot.source_file_name).all()
+        return render_template('screenshots.html', anime_id=anime_id, directory=directory, baseurl=baseurl, screenshots=screenshots, show_source_details=show_source_details)
 
 
 def get_anime_path(anime_id: int, url_basedir: str = '/anime', anime_basedir: str = '/vintergatan/anime', anime_id_pad_width: int = 6, anime_id_chunk_size: int = 2):
@@ -44,3 +49,9 @@ def get_anime_path(anime_id: int, url_basedir: str = '/anime', anime_basedir: st
     anime_id_path = [anime_id_padded[i:i+anime_id_chunk_size]
                      for i in range(0, anime_id_pad_width, anime_id_chunk_size)]
     return (os.path.join(anime_basedir, 'by-id', *anime_id_path), os.path.join(url_basedir, 'by-id', *anime_id_path))
+
+def get_screenshot_path(anime_id: int, url_basedir: str = '/screenshots', screenshot_basedir: str = '/anime/screenshots', anime_id_pad_width: int = 6, anime_id_chunk_size: int = 2):
+    anime_id_padded = str(anime_id).zfill(anime_id_pad_width)
+    anime_id_path = [anime_id_padded[i:i+anime_id_chunk_size]
+                     for i in range(0, anime_id_pad_width, anime_id_chunk_size)]
+    return (os.path.join(screenshot_basedir, 'by-id', *anime_id_path), os.path.join(url_basedir, 'by-id', *anime_id_path))

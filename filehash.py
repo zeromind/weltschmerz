@@ -4,6 +4,7 @@ import hashlib
 import os.path
 import zlib
 import time
+from Crypto.Hash import MD4
 from threading import Thread, Semaphore
 from io import BytesIO
 from typing import List
@@ -42,7 +43,10 @@ class Crc32:
 class Ed2k:
     def __init__(self):
         self.block_size = 9728000
-        self.md4chunk = hashlib.new('md4')
+        try:
+            self.md4chunk = hashlib.new('md4')
+        except ValueError:
+            self.md4chunk = MD4.new()
         self.md4chunk_pos = 0
         self.md4list = []
 
@@ -59,14 +63,20 @@ class Ed2k:
                 if self.block_size == self.md4chunk_pos:
                     self.md4list.append(self.md4chunk.digest())
                     self.md4chunk_pos = 0
-                    self.md4chunk = hashlib.new('md4')
+                    try:
+                        self.md4chunk = hashlib.new('md4')
+                    except ValueError:
+                        self.md4chunk = MD4.new()
         else:
             return
         b.close()
 
     def hexdigest(self):
         if len(self.md4list) > 0:
-            return hashlib.new('md4', b''.join(self.md4list) + self.md4chunk.digest()).hexdigest()
+            try:
+                return hashlib.new('md4', b''.join(self.md4list) + self.md4chunk.digest()).hexdigest()
+            except ValueError:
+                return MD4.new(b''.join(self.md4list) + self.md4chunk.digest()).hexdigest()
         else:
             return self.md4chunk.hexdigest()
 

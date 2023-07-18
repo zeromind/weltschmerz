@@ -31,7 +31,7 @@ def xml_parser():
     while True:
         with open(q_in.get(), 'r') as f:
                 anime_xml = f.read()
-                anime_data = xmltodict.parse(anime_xml, force_list=('episode', 'file'))
+                anime_data = xmltodict.parse(anime_xml, force_list=('episode', 'file', 'eprelations', 'filerelations'))
                 q_out.put(anime_data)
                 q_in.task_done()
 
@@ -108,12 +108,21 @@ def dict_to_mylist_anime_worker():
                 title_en = episode['name'],
                 last_update = episode_update,
             )
+            if 'name_kanji' in episode.keys():
+                anime_episode.title_jp = episode['name_kanji']
+            if 'name_romaji' in episode.keys():
+                anime_episode.title_jp_t = episode['name_romaji']
             dbs.session.merge(anime_episode)
             for file in episode['files']['file']:
                 # generic files are 0 bytes
                 # skip them for now
                 if int(file['size_plain']) == 0:
                     continue
+                # files containing multiple episodes have episode relations, can't track those atm
+                # skip them for now, when the current episode is from an ep relation
+                if len(file['eprelations']) >=1 and file['eprelations'] != [None]:
+                    if episode['@id'] in [eprel['eprelation']['@eid'] for eprel in file['eprelations']]:
+                        continue
                 try:
                     file_update = datetime.datetime.strptime(episode['update']['#text'], '%d.%m.%Y %H:%M')
                 except ValueError:
@@ -133,6 +142,12 @@ def dict_to_mylist_anime_worker():
                     hash_ed2k = file['hash_ed2k']['key'],
                     last_update = file_update,
                 )
+                file_screenshots = dbs.session.query(anime.TitleScreenShot).filter(anime.TitleScreenShot.fid == anime_file.fid).all()
+                for file_screenshot in file_screenshots:
+                    if file_screenshot.aid != anime_file.aid or file_screenshot.eid != anime_file.eid:
+                        file_screenshot.aid = anime_file.aid
+                        file_screenshot.eid = anime_file.eid
+                        dbs.session.merge(file_screenshot)
                 dbs.session.merge(anime_file)
 
         dbs.session.commit()

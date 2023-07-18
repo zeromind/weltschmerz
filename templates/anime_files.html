@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
     <title>Files for anime {{ anime_id }}</title>
-    <link rel="stylesheet" href="/anime/style.css" type="text/css" title="Style">
+    <link rel="stylesheet" href="/anime/style.css" type="text/css" title="Style" />
+    <script src="/anime/sorttable.js"></script>
 </head>
 <body>
-    <table id="files">
+    <table id="files" class="sortable">
         <thead>
             <tr>
                 <th class="filename">filename</th>
@@ -19,7 +20,7 @@
         <tbody>
             {%- for file in files %}
             <tr class="file">
-                <td class="filename"><wa href="{{ baseurl }}/{{ file.filename }}">{{ file.filename }}</a></td>
+                <td class="filename"><a href="{{ baseurl }}/{{ file.filename|e }}">{{ file.filename|e }}</a></td>
                 <td class="actions">{% if file.hash_ed2k %}<a href="mpv-ed2k://{{ file.hash_ed2k }}" class="action mpv" title="play in mpv">▶</a>{% endif %}</td>
                 <td class="filesize">{{ file.filesize or '' }}</td>
                 <td class="hash crc32">{{ file.hash_crc or '' }}</td>
@@ -29,5 +30,10 @@
             {%- endfor %}
         </tbody>
     </table>
+    <footer>
+        <p>
+            Anime data is from <a href="https://anidb.net">AniDB</a>, which is licensed under a <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+        </p>
+    </footer>
 </body>
 </html>
