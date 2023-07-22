@@ -75,6 +75,7 @@ def do_mpv_start(file_name: str, timestamp: str):
                 "--cache=no",
                 "--hwdec=auto-copy",
                 "--autoload-files=no",
+                "--access-references=no", # do not load linked files, breaks at least file-size property in mpv
                 file_name,
             ]
         )
