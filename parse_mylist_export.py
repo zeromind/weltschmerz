@@ -44,7 +44,7 @@ def xml_parser():
             anime_xml = f.read()
             anime_data = xmltodict.parse(
                 anime_xml,
-                force_list=("episode", "file", "eprelations", "filerelations"),
+                force_list=("episode", "file", "eprelation", "filerelation"),
             )
             q_out.put(anime_data)
             q_in.task_done()
@@ -148,9 +148,13 @@ def dict_to_mylist_anime_worker():
                     continue
                 # files containing multiple episodes have episode relations, can't track those atm
                 # skip them for now, when the current episode is from an ep relation
-                if len(file["eprelations"]) >= 1 and file["eprelations"] != [None]:
+                if (
+                    file["eprelations"]
+                    and "eprelation" in file["eprelations"].keys()
+                    and len(file["eprelations"]["eprelation"]) >= 1
+                ):
                     if episode["@id"] in [
-                        eprel["eprelation"]["@eid"] for eprel in file["eprelations"]
+                        eprel["@eid"] for eprel in file["eprelations"]["eprelation"]
                     ]:
                         continue
                 try:
