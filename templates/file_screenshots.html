@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>a{{ anime_id }} - Anime title cards</title>
+    <title>f{{ file_id }} - Anime title cards</title>
     <link rel="stylesheet" href="/anime/style.css" type="text/css" title="Style" />
     <script src="/anime/sorttable.js"></script>
 </head>
@@ -13,12 +13,10 @@
                 <th class="time position">position</th>
                 <th class="type" title="1 = ep, 2 = anime, 4 = ep preview">type</th>
                 <th class="image">image</th>
-                {%if show_source_details == 1 %}
                 <th class="file name">file</th>
                 <th class="file size">size</th>
                 <th class="file hash crc32">crc32</th>
                 <th class="file hash ed2k">ed2k</th>
-                {%- endif %}
                 <th class="episode id">eid</th>
                 <th class="episode title japanese kanji">jp</th>
                 <th class="episode title japanese transcription">jp_t</th>
@@ -37,23 +35,21 @@
                         <img src="/{{ screenshot.filename[7:]|urlencode }}" height="128" loading="lazy" />
                     </a>
                 </td>
-                {%- if show_source_details == 1 %}
                 <td class="file name">{{ screenshot.source_file_name|e }}</td>
                 <td class="file size">{{ screenshot.source_file_size }}</td>
                 <td class="file hash crc32">{{ screenshot.source_file_hash_crc or '' }}</td>
                 <td class="file hash ed2k">{{ screenshot.source_file_hash_ed2k or '' }}</td>
-                {%- endif %}
                 <td class="episode id">
                     <a href="/screenshots/episode/{{ screenshot.eid }}">{{ screenshot.eid }}</a><br />
-                    <a href="https://anidb.net/episode/{{ screenshot.eid }}">anidb</a>{%- if show_move_links == 1 %}<br />
-                    <a href="https://anidb.net/file/add/?aid={{ screenshot.episode.aid }}&eid={{ screenshot.eid }}&move={{ screenshot.fid }}">move file</a>{% endif %}
+                    <a href="https://anidb.net/episode/{{ screenshot.eid }}">anidb</a><br />
+                    <a href="https://anidb.net/file/add/?aid={{ screenshot.episode.aid }}&eid={{ screenshot.eid }}&move={{ screenshot.fid }}">move file</a>
                 </td>
                 <td class="episode title japanese kanji">{%if screenshot.episode.title_jp %}{{ screenshot.episode.title_jp|e or '' }}{% endif %}</td>
                 <td class="episode title japanese transcription">{%if screenshot.episode.title_jp_t %}{{ screenshot.episode.title_jp_t|e or '' }}{% endif %}</td>
                 <td class="episode title english">{%if screenshot.episode.title_en %}{{ screenshot.episode.title_en|e or '' }}{% endif %}</td>
                 <td class="file id">
                     <a href="/screenshots/file/{{ screenshot.fid }}">{{ screenshot.fid }}</a><br />
-                    <a href="https://anidb.net/episode/file/{{ screenshot.fid }}">anidb</a>
+                    <a href="https://anidb.net/file/{{ screenshot.fid }}">anidb</a>
                 </td>
             </tr>
             {%- endfor %}

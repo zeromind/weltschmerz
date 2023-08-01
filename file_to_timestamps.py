@@ -116,7 +116,7 @@ if __name__ == "__main__":
             .one()
         )
         known_screenshots_local_file = get_known_screenshots_local_file(dbs, target_title_type, known_localfile.hash_ed2k, known_localfile.filesize)
-        if len(known_screenshots_local_file) >= config.title_limit:
+        if len(known_screenshots_local_file) >= int(config.title_limit):
             logging.info(
                 f"found file '{filename}' in DB, enough title screenshots already present, skipping..."
             )
@@ -156,7 +156,7 @@ if __name__ == "__main__":
                 for timestamp in timestamps:
                     do_mpv_start(real_path, timestamp)
                     known_screenshots_local_file_refreshed = get_known_screenshots_local_file(dbs, target_title_type, known_localfile.hash_ed2k, known_localfile.filesize)
-                    if len(known_screenshots_local_file_refreshed) >= config.title_limit:
+                    if len(known_screenshots_local_file_refreshed) >= int(config.title_limit):
                         logging.info(
                             f"found file '{filename}' in DB, enough title screenshots already present, exiting..."
                         )
