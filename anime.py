@@ -10,9 +10,12 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Float,
+    JSON,
+    DateTime,
 )
 from sqlalchemy.orm import sessionmaker, relationship
 import sqlalchemy.sql.functions
+from sqlalchemy.sql import func
 import os.path
 
 Base = declarative_base()
@@ -199,6 +202,21 @@ class TitleScreenShot(Base):
     source_file_hash_tth = Column(String)
     source_file_hash_ed2k = Column(String, nullable=False)
     episode = relationship("Episode", back_populates="screenshots")
+
+
+class AnidbFileResponse(Base):
+    __tablename__ = "anidb_file_response"
+    hash_ed2k = Column(String, nullable=False, primary_key=True)
+    filesize = Column(BigInteger, nullable=False, primary_key=True)
+    fmask = Column(String, nullable=False, primary_key=True)
+    famask = Column(String, nullable=False, primary_key=True)
+    data = Column(JSON)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        Index("idx_anidb_file_response_hash_ed2k_filesize", "hash_ed2k", "filesize", unique=True),
+    )
+
 
 
 class DatabaseSession:

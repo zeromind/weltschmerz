@@ -7,10 +7,12 @@ import anime
 import configparser
 import argparse
 
-# import yumemi
+import yumemi
 import sys
 import anime
 import masks
+import time
+import datetime
 
 CLIENT_NAME = "weltschmerz"
 CLIENT_VERSION = 0
@@ -148,6 +150,24 @@ def get_config(config_file: str = "weltschmerz.cfg"):
         dest="target_crc32",
         action="store_true",
     )
+    parser.add_argument(
+        "--online",
+        "-O",
+        help="whether to ask anidb about file info",
+        default=False,
+        dest="online",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--anidb-username",
+        help="AniDB username",
+        default=config.get("anidb", "username"),
+    )
+    parser.add_argument(
+        "--anidb-password",
+        help="AniDB password",
+        default=config.get("anidb", "password"),
+    )
 
     args = parser.parse_args()
     return args
@@ -160,26 +180,91 @@ class AniDBClient:
         local_database_verbose: bool = False,
         fmask=masks.FMASK,
         famask=masks.FAMASK,
+        online: bool = False,
+        anidb_username: str = None,
+        anidb_password: str = None,
     ):
         (self.fmask_string, self.fmask_fields) = masks.make_mask(fmask)
         (self.famask_string, self.famask_fields) = masks.make_mask(famask)
         self.dbs = anime.DatabaseSession(local_database, local_database_verbose)
-        # self.client = yumemi.Client(CLIENT_NAME, CLIENT_VERSION)
+        self.online = online
+        self.client = None
+        self.anidb_username = anidb_username
+        self.anidb_password = anidb_password
 
-    def lookup_file(self, file_size: int, hash_ed2k: str):
-        result = self.client.command(
-            "FILE",
-            {
-                "size": file_size,
-                "ed2k": hash_ed2k,
-                "fmask": self.fmask_string,
-                "amask": self.famask_string,
-            },
+    def go_online(self):
+        if not self.client:
+            if self.anidb_username and self.anidb_password and self.online:
+                self.client = yumemi.Client(CLIENT_NAME, CLIENT_VERSION)
+                self.client.auth(self.anidb_username, self.anidb_password)
+            else:
+                raise ValueError
+
+    def lookup_file(self, file_size: int, hash_ed2k: str) -> dict:
+        file_data = {}
+        ##############
+        # try cache
+        ##############
+        cached_response = (
+            self.dbs.session.query(anime.AnidbFileResponse)
+            .filter(anime.AnidbFileResponse.hash_ed2k == hash_ed2k)
+            .filter(anime.AnidbFileResponse.filesize == file_size)
+            .first()
         )
-        if result.code == 220:  # file found
-            requested_fields = self.fmask_fields + self.famask_fields
-            # "fid is always returned as the first value, regardless of what masks are provided."
-            file_data = dict(zip(["fid"] + requested_fields, result.data[0]))
+        if cached_response:
+            file_data = cached_response.data
+            # print(f"DEBUG: cached file data found {file_data}")
+        if self.online and not cached_response:
+            ##############
+            # ask AniDB
+            ##############
+            try:
+                self.go_online()
+                result = self.client.command(
+                    "FILE",
+                    {
+                        "size": file_size,
+                        "ed2k": hash_ed2k,
+                        "fmask": self.fmask_string,
+                        "amask": self.famask_string,
+                    },
+                )
+                if result.code == 220:  # file found
+                    requested_fields = self.fmask_fields + self.famask_fields
+                    # "fid is always returned as the first value, regardless of what masks are provided."
+                    file_data = dict(zip(["fid"] + requested_fields, result.data[0]))
+            except Exception as e:
+                print(
+                    f"WARN: AniDB lookup failed for {hash_ed2k} / {file_size}: {type(e)}"
+                )
+            # persist new cached response
+            anidb_file_response = anime.AnidbFileResponse(
+                hash_ed2k=hash_ed2k,
+                filesize=file_size,
+                fmask=self.fmask_string,
+                famask=self.famask_string,
+                data=file_data,
+                updated_at=datetime.datetime.utcnow(),
+            )
+            self.dbs.session.merge(anidb_file_response)
+        if len(file_data.keys()) > 0:
+            # print(f"DEBUG: file data found {file_data}")
+
+            # update local DB from data
+            local_db_anime = anime.Anime(
+                aid=file_data["aid"], last_update=datetime.datetime.utcnow()
+            )
+            self.dbs.session.merge(local_db_anime)
+            local_db_episode = anime.Episode(
+                eid=file_data["eid"],
+                aid=file_data["aid"],
+                ep=file_data["epno"],
+                title_en=file_data["ep name"],
+                title_jp=file_data["ep kanji name"],
+                title_jp_t=file_data["ep romaji name"],
+                last_update=datetime.datetime.utcnow(),
+            )
+            self.dbs.session.merge(local_db_episode)
             local_db_file = anime.File(
                 fid=file_data["fid"],
                 filesize=file_size,
@@ -189,22 +274,24 @@ class AniDBClient:
                 source=file_data["source"],
                 extension=file_data["file type (extension)"],
                 hash_ed2k=hash_ed2k,
+                last_update=datetime.datetime.utcnow(),
             )
             self.dbs.session.merge(local_db_file)
-        elif result.code == 320:  # file not found
-            pass
-        return result
+            self.dbs.session.commit()
+        return file_data
 
 
 if __name__ == "__main__":
     config = get_config()
-    adbc = AniDBClient(config.database, False, FMASK, FAMASK)
-    # known_files = (
-    #     adbc.dbs.session.query(anime.LocalFile)
-    #     .join(anime.File, anime.LocalFile.hash_ed2k == anime.File.hash_ed2k)
-    #     .filter(anime.LocalFile.directory.like(f'{config.source_basedir.rstrip("/")}%'))
-    #     .all()
-    # )
+    adbc = AniDBClient(
+        config.database,
+        False,
+        FMASK,
+        FAMASK,
+        config.online,
+        config.anidb_username,
+        config.anidb_password,
+    )
     unknown_files = (
         adbc.dbs.session.query(anime.LocalFile)
         .filter(anime.LocalFile.directory.like(f'{config.source_basedir.rstrip("/")}%'))
@@ -212,30 +299,38 @@ if __name__ == "__main__":
         .all()
     )
     known_files = []
+    files_to_look_up = []
     for i, unknown_file in enumerate(unknown_files):
         known_file = (
             adbc.dbs.session.query(anime.File)
             .join(anime.LocalFile, anime.LocalFile.hash_ed2k == anime.File.hash_ed2k)
             .filter(anime.File.hash_ed2k == unknown_file.hash_ed2k)
-            .all()
+            .first()
         )
-        if len(known_file) == 1:
-            # print(f'found file: {known_file[0].fid}')
-            unknown_file.fid = known_file[0].fid
-            unknown_file.aid = known_file[0].aid
+        if known_file:
+            print(f"found file: {known_file.fid}")
+            unknown_file.fid = known_file.fid
+            unknown_file.aid = known_file.aid
 
             known_files.append(unknown_file)
+        else:
+            files_to_look_up.append(unknown_file)
         if len(known_files) % 100 == 0:
-            # print(len(known_files))
             adbc.dbs.session.commit()
 
-    print(f'{config.source_basedir.rstrip("/")} {len(known_files)}')
+    print(
+        f'{config.source_basedir.rstrip("/")} - unknown files: {len(unknown_files)} - known: {len(known_files)} - to look up: {len(files_to_look_up)}'
+    )
     if len(known_files) > 0:
         adbc.dbs.session.commit()
-    # print(len(unknown_files))
-    if len(unknown_files) == 0:
-        sys.exit(0)
-    # try:
-    #     pass
-    # except yumemi.AnidbError as e:
-    #     print(e)
+
+    # for i, file_to_look_up in enumerate(unknown_files):
+    for i, file_to_look_up in enumerate(files_to_look_up):
+        anidb_result = adbc.lookup_file(
+            file_to_look_up.filesize, file_to_look_up.hash_ed2k
+        )
+        if adbc.online:
+            time.sleep(3)
+    adbc.dbs.session.commit()
+    if adbc.online and adbc.client:
+        adbc.client.logout()
