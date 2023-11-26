@@ -15,8 +15,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import sessionmaker, relationship
 import sqlalchemy.sql.functions
-from sqlalchemy.sql import func
 import os.path
+import datetime
 
 Base = declarative_base()
 
@@ -211,7 +211,7 @@ class AnidbFileResponse(Base):
     fmask = Column(String, nullable=False, primary_key=True)
     famask = Column(String, nullable=False, primary_key=True)
     data = Column(JSON)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=datetime.datetime.utcnow())
 
     __table_args__ = (
         Index("idx_anidb_file_response_hash_ed2k_filesize", "hash_ed2k", "filesize", unique=True),
