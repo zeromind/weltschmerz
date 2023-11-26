@@ -145,6 +145,7 @@ if __name__ == "__main__":
         )
         if len(known_file) == 1:
             lf.fid = known_file[0].fid
+            lf.aid = known_file[0].aid
         print(f"{lf.filename}: {lf.hash_crc}")
         hasher.dbs.session.merge(lf)
         hasher.dbs.session.commit()

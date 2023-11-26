@@ -208,7 +208,7 @@ if __name__ == "__main__":
     unknown_files = (
         adbc.dbs.session.query(anime.LocalFile)
         .filter(anime.LocalFile.directory.like(f'{config.source_basedir.rstrip("/")}%'))
-        .filter(anime.LocalFile.fid == None)
+        .filter((anime.LocalFile.fid == None) | (anime.LocalFile.aid == None))
         .all()
     )
     known_files = []
@@ -220,14 +220,19 @@ if __name__ == "__main__":
             .all()
         )
         if len(known_file) == 1:
-            #print(f'found file: {known_file[0].fid}')
+            # print(f'found file: {known_file[0].fid}')
             unknown_file.fid = known_file[0].fid
+            unknown_file.aid = known_file[0].aid
+
             known_files.append(unknown_file)
         if len(known_files) % 100 == 0:
-            #print(len(known_files))
+            # print(len(known_files))
             adbc.dbs.session.commit()
-    adbc.dbs.session.commit()
-    #print(len(unknown_files))
+
+    print(f'{config.source_basedir.rstrip("/")} {len(known_files)}')
+    if len(known_files) > 0:
+        adbc.dbs.session.commit()
+    # print(len(unknown_files))
     if len(unknown_files) == 0:
         sys.exit(0)
     # try:
