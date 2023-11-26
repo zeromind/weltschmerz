@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-amask = (
+AMASK = (
     (
         [1, "int", "aid"],  # byte 1
         [0, "int", "dateflags"],
@@ -72,43 +72,43 @@ amask = (
         [0, "", ""],
     ),
 )
-fmask = (
+FMASK = (
     (
         [0, "", ""],  # byte 1
         [1, "int4", "aid"],
-        [0, "int4", "eid"],
+        [1, "int4", "eid"],
         [1, "int4", "gid"],
         [1, "int4", "mylist id"],
-        [0, "list", "other episodes"],
+        [1, "list", "other episodes"],
         [1, "int2", "IsDeprecated"],
         [1, "int2", "state"],
     ),
     (
-        [0, "int8", "size"],  # byte 2
-        [0, "str", "ed2k"],
-        [0, "str", "md5"],
-        [0, "str", "sha1"],
+        [1, "int8", "size"],  # byte 2
+        [1, "str", "ed2k"],
+        [1, "str", "md5"],
+        [1, "str", "sha1"],
         [1, "str", "crc32"],
         [0, "", ""],
         [0, "", "video color depth"],
         [0, "", ""],
     ),
     (
-        [0, "str", "quality"],  # byte 3
-        [0, "str", "source"],
-        [0, "str", "audio codec list"],
-        [0, "int4", "audio bitrate list"],
-        [0, "str", "video codec"],
-        [0, "int4", "video bitrate"],
-        [0, "str", "video resolution"],
+        [1, "str", "quality"],  # byte 3
+        [1, "str", "source"],
+        [1, "str", "audio codec list"],
+        [1, "int4", "audio bitrate list"],
+        [1, "str", "video codec"],
+        [1, "int4", "video bitrate"],
+        [1, "str", "video resolution"],
         [0, "str", "file type (extension)"],
     ),
     (
-        [0, "str", "dub language"],  # byte 4
-        [0, "str", "sub language"],
-        [0, "int4", "length in seconds"],
-        [0, "str", "description"],
-        [0, "int4", "aired date"],
+        [1, "str", "dub language"],  # byte 4
+        [1, "str", "sub language"],
+        [1, "int4", "length in seconds"],
+        [1, "str", "description"],
+        [1, "int4", "aired date"],
         [0, "", ""],
         [0, "", ""],
         [0, "str", "anidb file name"],
@@ -124,10 +124,10 @@ fmask = (
         [0, "", ""],
     ),
 )
-famask = (
+FAMASK = (
     (
-        [0, "int4", "anime total episodes"],  # byte 1
-        [0, "", "highest episode number"],
+        [1, "int4", "anime total episodes"],  # byte 1
+        [1, "", "highest episode number"],
         [0, "", "year"],
         [0, "", "type"],
         [0, "", "related aid list"],
@@ -146,18 +146,18 @@ famask = (
         [0, "", ""],
     ),
     (
-        [0, "str", "epno"],  # byte 3
-        [0, "str", "ep name"],
-        [0, "str", "ep romaji name"],
-        [0, "str", "ep kanji name"],
+        [1, "str", "epno"],  # byte 3
+        [1, "str", "ep name"],
+        [1, "str", "ep romaji name"],
+        [1, "str", "ep kanji name"],
         [0, "int4", "episode rating"],
         [0, "int4", "episode vote count"],
         [0, "", ""],
         [0, "", ""],
     ),
     (
-        [0, "str", "group name"],  # byte 4
-        [0, "str", "group short name"],
+        [1, "str", "group name"],  # byte 4
+        [1, "str", "group short name"],
         [0, "", ""],
         [0, "", ""],
         [0, "", ""],
@@ -262,16 +262,22 @@ testmask_two = (
 )
 
 
-def hexstring(mask):
-    string = ""
+def make_mask(mask):
+    mask_bits = ""
+    fields = []
     for byte in mask:
         total = ""
         for bit in byte:
             total += str(bit[0])
-        string += hex(int(total, 2))[2:].rjust(2, "0")
-    return str.upper(string)
+            if bit[0] == 1:
+                fields.append(bit[2])
+        mask_bits += f"{int(total, 2):b}".rjust(8, "0")
+
+    mask_string = f"{int(mask_bits, 2):X}"
+    return (mask_string, fields)
 
 
 if __name__ == "__main__":
     # print(hexstring(testmask))
-    print(hexstring(testmask_two))
+    print(make_mask(FMASK))
+    print(make_mask(FAMASK))
