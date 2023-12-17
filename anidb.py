@@ -123,6 +123,14 @@ def get_config(config_file: str = "weltschmerz.cfg"):
         "--database", help="database to use", default=config.get("client", "database")
     )
     parser.add_argument(
+        "--debug",
+        "-d",
+        help="show debug output",
+        default=False,
+        dest="debug",
+        action="store_true",
+    )
+    parser.add_argument(
         "--source-basedir",
         help="source folder to process",
         default=None,
@@ -183,6 +191,7 @@ class AniDBClient:
         online: bool = False,
         anidb_username: str = None,
         anidb_password: str = None,
+        debug: bool = False,
     ):
         (self.fmask_string, self.fmask_fields) = masks.make_mask(fmask)
         (self.famask_string, self.famask_fields) = masks.make_mask(famask)
@@ -191,12 +200,15 @@ class AniDBClient:
         self.client = None
         self.anidb_username = anidb_username
         self.anidb_password = anidb_password
+        self.debug = debug
 
     def go_online(self):
         if not self.client:
             if self.anidb_username and self.anidb_password and self.online:
                 self.client = yumemi.Client(CLIENT_NAME, CLIENT_VERSION)
-                self.client.auth(self.anidb_username, self.anidb_password)
+                result = self.client.auth(self.anidb_username, self.anidb_password)
+                if self.debug:
+                    print("DEBUG: ", result.code, result.message)
             else:
                 raise ValueError
 
@@ -213,7 +225,8 @@ class AniDBClient:
         )
         if cached_response:
             file_data = cached_response.data
-            # print(f"DEBUG: cached file data found {file_data}")
+            if self.debug:
+                print(f"DEBUG: cached file data found {file_data}")
         if self.online and not cached_response:
             ##############
             # ask AniDB
@@ -229,6 +242,8 @@ class AniDBClient:
                         "amask": self.famask_string,
                     },
                 )
+                if self.debug:
+                    print(result.code, result.message)
                 if result.code == 220:  # file found
                     requested_fields = self.fmask_fields + self.famask_fields
                     # "fid is always returned as the first value, regardless of what masks are provided."
@@ -237,6 +252,8 @@ class AniDBClient:
                 print(
                     f"WARN: AniDB lookup failed for {hash_ed2k} / {file_size}: {type(e)}"
                 )
+                self.dbs.session.commit()
+                raise
             # persist new cached response
             anidb_file_response = anime.AnidbFileResponse(
                 hash_ed2k=hash_ed2k,
@@ -247,8 +264,10 @@ class AniDBClient:
                 updated_at=datetime.datetime.utcnow(),
             )
             self.dbs.session.merge(anidb_file_response)
+            self.dbs.session.commit()
         if len(file_data.keys()) > 0:
-            # print(f"DEBUG: file data found {file_data}")
+            if self.debug:
+                print(f"DEBUG: file data found {file_data}")
 
             # update local DB from data
             local_db_anime = anime.Anime(
@@ -291,6 +310,7 @@ if __name__ == "__main__":
         config.online,
         config.anidb_username,
         config.anidb_password,
+        config.debug,
     )
     unknown_files = (
         adbc.dbs.session.query(anime.LocalFile)
@@ -298,9 +318,12 @@ if __name__ == "__main__":
         .filter((anime.LocalFile.fid == None) | (anime.LocalFile.aid == None))
         .all()
     )
+    print(f"INFO: unknown files: {len(unknown_files)}")
     known_files = []
     files_to_look_up = []
     for i, unknown_file in enumerate(unknown_files):
+        if config.debug:
+            print(f"DEBUG: {i}/{len(unknown_files)}")
         known_file = (
             adbc.dbs.session.query(anime.File)
             .join(anime.LocalFile, anime.LocalFile.hash_ed2k == anime.File.hash_ed2k)
@@ -308,29 +331,19 @@ if __name__ == "__main__":
             .first()
         )
         if known_file:
-            print(f"found file: {known_file.fid}")
+            print(f"INFO: found file {known_file.fid}")
             unknown_file.fid = known_file.fid
             unknown_file.aid = known_file.aid
-
             known_files.append(unknown_file)
-        else:
-            files_to_look_up.append(unknown_file)
-        if len(known_files) % 100 == 0:
+        elif config.online:
+            anidb_result = adbc.lookup_file(
+                unknown_file.filesize,
+                unknown_file.hash_ed2k,
+            )
+        if i % 10 == 0 and len(adbc.dbs.session.dirty) > 0:
+            if config.debug:
+                print("DEBUG: comitting...")
             adbc.dbs.session.commit()
-
-    print(
-        f'{config.source_basedir.rstrip("/")} - unknown files: {len(unknown_files)} - known: {len(known_files)} - to look up: {len(files_to_look_up)}'
-    )
-    if len(known_files) > 0:
-        adbc.dbs.session.commit()
-
-    # for i, file_to_look_up in enumerate(unknown_files):
-    for i, file_to_look_up in enumerate(files_to_look_up):
-        anidb_result = adbc.lookup_file(
-            file_to_look_up.filesize, file_to_look_up.hash_ed2k
-        )
-        if adbc.online:
-            time.sleep(3)
     adbc.dbs.session.commit()
     if adbc.online and adbc.client:
         adbc.client.logout()
