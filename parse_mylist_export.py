@@ -178,6 +178,20 @@ def dict_to_mylist_anime_worker():
                     hash_ed2k=file["hash_ed2k"]["key"],
                     last_update=file_update,
                 )
+                try:
+                    view_date = datetime.datetime.strptime(
+                        file["viewdate"]["long"], "%d.%m.%Y %H:%M"
+                    )
+                except ValueError:
+                    view_date = None
+                anime_mylist_file = anime.MylistFile(
+                    fid=file["@id"],
+                    ml_state=file["mystate"]["@id"],
+                    ml_viewed=file["state"]["iswatched"],
+                    ml_viewdate=view_date,
+                    ml_storage=file["storage"],
+                    ml_source=file["source"],
+                )
                 file_screenshots = (
                     dbs.session.query(anime.TitleScreenShot)
                     .filter(anime.TitleScreenShot.fid == anime_file.fid)
@@ -192,8 +206,10 @@ def dict_to_mylist_anime_worker():
                         file_screenshot.eid = anime_file.eid
                         dbs.session.merge(file_screenshot)
                 dbs.session.merge(anime_file)
+                dbs.session.merge(anime_mylist_file)
 
-        dbs.session.commit()
+        if dbs.session.dirty:
+            dbs.session.commit()
         q_out.task_done()
 
 
