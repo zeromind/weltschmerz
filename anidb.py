@@ -116,9 +116,7 @@ def get_config(config_file: str = "weltschmerz.cfg"):
     config = configparser.ConfigParser()
     config.read_file(open(config_file))
 
-    parser = argparse.ArgumentParser(
-        description="Move known local files to target directory."
-    )
+    parser = argparse.ArgumentParser(description="Lookup files in AniDB.")
     parser.add_argument(
         "--database", help="database to use", default=config.get("client", "database")
     )
@@ -137,25 +135,11 @@ def get_config(config_file: str = "weltschmerz.cfg"):
         dest="source_basedir",
     )
     parser.add_argument(
-        "--target-basedir",
-        help="target basedir to move files to",
-        default=None,
-        dest="target_basedir",
-    )
-    parser.add_argument(
         "--dry-run",
         "-n",
         help="dry-run, no moving files",
         default=False,
         dest="dry_run",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--target-crc32",
-        "-C",
-        help="add crc32 to target filename",
-        default=False,
-        dest="target_crc32",
         action="store_true",
     )
     parser.add_argument(
@@ -176,6 +160,11 @@ def get_config(config_file: str = "weltschmerz.cfg"):
         help="AniDB password",
         default=config.get("anidb", "password"),
     )
+    parser.add_argument(
+        "--anidb-udp-api-key",
+        help="AniDB UDP API Key",
+        default=config.get("anidb", "udp_api_key"),
+    )
 
     args = parser.parse_args()
     return args
@@ -191,6 +180,7 @@ class AniDBClient:
         online: bool = False,
         anidb_username: str = None,
         anidb_password: str = None,
+        anidb_udp_api_key: str = None,
         debug: bool = False,
     ):
         (self.fmask_string, self.fmask_fields) = masks.make_mask(fmask)
@@ -200,12 +190,15 @@ class AniDBClient:
         self.client = None
         self.anidb_username = anidb_username
         self.anidb_password = anidb_password
+        self.anidb_udp_api_key = anidb_udp_api_key
         self.debug = debug
 
     def go_online(self):
         if not self.client:
             if self.anidb_username and self.anidb_password and self.online:
                 self.client = yumemi.Client(CLIENT_NAME, CLIENT_VERSION)
+                if self.anidb_udp_api_key:
+                    self.client.encrypt(self.anidb_username, self.anidb_udp_api_key)
                 result = self.client.auth(self.anidb_username, self.anidb_password)
                 if self.debug:
                     print("DEBUG: ", result.code, result.message)
@@ -310,6 +303,7 @@ if __name__ == "__main__":
         config.online,
         config.anidb_username,
         config.anidb_password,
+        config.anidb_udp_api_key,
         config.debug,
     )
     unknown_files = (
@@ -321,7 +315,7 @@ if __name__ == "__main__":
     print(f"INFO: unknown files: {len(unknown_files)}")
     known_files = []
     files_to_look_up = []
-    for i, unknown_file in enumerate(unknown_files):
+    for i, unknown_file in enumerate(unknown_files, start=1):
         if config.debug:
             print(f"DEBUG: {i}/{len(unknown_files)}")
         known_file = (
