@@ -139,11 +139,10 @@ class LocalFile(Base):
 
 class MylistFile(Base):
     __tablename__ = "mylist"
-    ml_id = Column(BigInteger, nullable=False, primary_key=True, default=None)
-    fid = Column(Integer, ForeignKey("file.fid"), nullable=False)
+    fid = Column(Integer, ForeignKey("file.fid"), primary_key=True, nullable=False)
     ml_state = Column(Integer, nullable=False)
     ml_viewed = Column(Integer)
-    ml_viewdate = Column(Date)
+    ml_viewdate = Column(DateTime(timezone=True))
     ml_storage = Column(String)
     ml_source = Column(String)
     ml_other = Column(String)
