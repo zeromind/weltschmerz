@@ -13,6 +13,7 @@ import anime
 import masks
 import time
 import datetime
+from typing import Optional
 
 CLIENT_NAME = "weltschmerz"
 CLIENT_VERSION = 0
@@ -151,6 +152,19 @@ def get_config(config_file: str = "weltschmerz.cfg"):
         action="store_true",
     )
     parser.add_argument(
+        "--add-to-mylist",
+        "-M",
+        help="whether to add known files to mylist",
+        default=False,
+        dest="add_to_mylist",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--mylist-state",
+        help="mylist state",
+        default=config.get("anidb", "mylist_state"),
+    )
+    parser.add_argument(
         "--anidb-username",
         help="AniDB username",
         default=config.get("anidb", "username"),
@@ -181,6 +195,7 @@ class AniDBClient:
         anidb_username: str = None,
         anidb_password: str = None,
         anidb_udp_api_key: str = None,
+        mylist_state: int = 4,
         debug: bool = False,
     ):
         (self.fmask_string, self.fmask_fields) = masks.make_mask(fmask)
@@ -191,6 +206,7 @@ class AniDBClient:
         self.anidb_username = anidb_username
         self.anidb_password = anidb_password
         self.anidb_udp_api_key = anidb_udp_api_key
+        self.mylist_state = mylist_state
         self.debug = debug
 
     def go_online(self):
@@ -204,6 +220,143 @@ class AniDBClient:
                     print("DEBUG: ", result.code, result.message)
             else:
                 raise ValueError
+
+    def add_file_to_mylist(
+        self,
+        # state:
+        # 0 - unknown - state is unknown or the user doesn't want to provide this information
+        # 1 - internal storage - the file is stored on hdd (but is not shared)
+        # 2 - external storage - the file is stored on cd/dvd/...
+        # 3 - deleted - the file has been deleted or is not available for other reasons (i.e. reencoded)
+        # 4 - remote storage - the file is stored on NAS/cloud/...
+        state: int = 4,
+        file_size: Optional[int] = None,
+        hash_ed2k: Optional[str] = None,
+        file_id: Optional[int] = None,
+        viewed: Optional[bool] = None,
+        viewdate: Optional[str] = None,
+        source: Optional[str] = None,
+        storage: Optional[str] = None,
+        other: Optional[str] = None,
+    ) -> dict:
+        if not ((file_size and hash_ed2k) or file_id):
+            raise ValueError
+        if self.online:
+            ##############
+            # ask AniDB
+            ##############
+            try:
+                if file_id:
+                    params = {"fid": file_id}
+                else:
+                    params = {
+                        "size": file_size,
+                        "ed2k": hash_ed2k,
+                    }
+                if state:
+                    params["state"] = state
+                if viewed:
+                    params["viewed"] = viewed
+                if viewdate:
+                    params["viewdate"] = viewdate
+                if source:
+                    params["source"] = source
+                if storage:
+                    params["storage"] = storage
+                if other:
+                    params["other"] = other
+                if self.debug:
+                    print(f"DEBUG: {params}")
+                self.go_online()
+                result = self.client.command(
+                    "MYLISTADD",
+                    params,
+                )
+                if self.debug:
+                    print(f"DEBUG: {result.data[0]}")
+                if result.code == 210:  # mylist entry added
+                    if file_id:
+                        mylist_file = anime.MylistFile(
+                            fid=file_id,
+                        )
+                    else:
+                        anidb_file = (
+                            self.dbs.session.query(anime.File)
+                            .filter(anime.AnidbFileResponse.hash_ed2k == hash_ed2k)
+                            .filter(anime.AnidbFileResponse.filesize == file_size)
+                            .first()
+                        )
+                        mylist_file = anime.MylistFile(
+                            fid=anidb_file.fid,
+                        )
+                    if state:
+                        mylist_file.ml_state = state
+                    if viewed:
+                        mylist_file.ml_viewed = viewed
+                    if viewdate:
+                        mylist_file.ml_viewdate = viewdate
+                    if source:
+                        mylist_file.ml_source = source
+                    if storage:
+                        mylist_file.ml_storage = storage
+                    if other:
+                        mylist_file.ml_other = other
+                    # ml_state=file["mystate"]["@id"],
+                    # ml_viewed=file["state"]["iswatched"],
+                    # ml_viewdate=view_date,
+                    # ml_storage=file["storage"],
+                    # ml_source=file["source"],
+                    self.dbs.session.merge(mylist_file)
+                    self.dbs.session.commit()
+                elif result.code == 310:  # file already in mylist
+                    mylist_data = dict(
+                        zip(
+                            [
+                                "lid",
+                                "fid",
+                                "eid",
+                                "aid",
+                                "gid",
+                                "date",
+                                "state",
+                                "viewdate",
+                                "storage",
+                                "source",
+                                "other",
+                                "filestate",
+                            ],
+                            result.data[0],
+                        )
+                    )
+                    if int(mylist_data["viewdate"]) > 0:
+                        viewdate = datetime.datetime.fromtimestamp(
+                            int(mylist_data["viewdate"])
+                        )
+                        viewed = 1
+                    else:
+                        viewdate = None
+                        viewed = None
+                    mylist_file = anime.MylistFile(
+                        fid=int(mylist_data["fid"]),
+                        ml_state=int(mylist_data["state"]),
+                        ml_viewed=viewed,
+                        ml_viewdate=viewdate,
+                        ml_storage=mylist_data["storage"],
+                        ml_source=mylist_data["source"],
+                        ml_other=mylist_data["other"],
+                    )
+                    self.dbs.session.merge(mylist_file)
+                    self.dbs.session.commit()
+                return result
+
+            except Exception as e:
+                if file_id:
+                    file_info = f"file id {file_id}"
+                else:
+                    file_info = f"{hash_ed2k} / {file_size}"
+                print(f"WARN: Adding to mylist failed for {file_info}: {type(e)}")
+                self.dbs.session.commit()
+                raise
 
     def lookup_file(self, file_size: int, hash_ed2k: str) -> dict:
         file_data = {}
@@ -304,6 +457,7 @@ if __name__ == "__main__":
         config.anidb_username,
         config.anidb_password,
         config.anidb_udp_api_key,
+        config.mylist_state,
         config.debug,
     )
     unknown_files = (
@@ -329,15 +483,35 @@ if __name__ == "__main__":
             unknown_file.fid = known_file.fid
             unknown_file.aid = known_file.aid
             known_files.append(unknown_file)
+            if config.add_file_to_mylist and config.online:
+                mylist_file = (
+                    adbc.dbs.session.query(anime.MylistFile)
+                    .filter(anime.MylistFile.fid == unknown_file.fid)
+                    .first()
+                )
+                # add file to mylist of not in there yet
+                if not mylist_file:
+                    result = adbc.add_file_to_mylist(
+                        file_id=unknown_file.fid,
+                        state=adbc.mylist_state,
+                    )
+
         elif config.online:
             anidb_result = adbc.lookup_file(
                 unknown_file.filesize,
                 unknown_file.hash_ed2k,
             )
+            if "fid" in anidb_result.keys():
+                result = adbc.add_file_to_mylist(
+                    file_id=anidb_result["fid"],
+                    state=adbc.mylist_state,
+                )
         if i % 10 == 0 and len(adbc.dbs.session.dirty) > 0:
             if config.debug:
                 print("DEBUG: comitting...")
             adbc.dbs.session.commit()
+        if i == 1:
+            break
     adbc.dbs.session.commit()
     if adbc.online and adbc.client:
         adbc.client.logout()
