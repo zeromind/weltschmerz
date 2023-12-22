@@ -483,7 +483,7 @@ if __name__ == "__main__":
             unknown_file.fid = known_file.fid
             unknown_file.aid = known_file.aid
             known_files.append(unknown_file)
-            if config.add_file_to_mylist and config.online:
+            if config.add_to_mylist and config.online:
                 mylist_file = (
                     adbc.dbs.session.query(anime.MylistFile)
                     .filter(anime.MylistFile.fid == unknown_file.fid)
