@@ -102,7 +102,7 @@ class File(Base):
     hash_sha1 = Column(String)
     hash_tth = Column(String)
     hash_ed2k = Column(String, nullable=False)
-    last_update = Column(Date)
+    last_update = Column(DateTime(timezone=True), onupdate=datetime.datetime.utcnow())
     __table_args__ = (
         Index("idx_file_hash_ed2k", "hash_ed2k", "filesize", unique=True),
     )

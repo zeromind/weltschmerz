@@ -510,8 +510,6 @@ if __name__ == "__main__":
             if config.debug:
                 print("DEBUG: comitting...")
             adbc.dbs.session.commit()
-        if i == 1:
-            break
     adbc.dbs.session.commit()
     if adbc.online and adbc.client:
         adbc.client.logout()
