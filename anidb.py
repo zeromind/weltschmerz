@@ -17,6 +17,9 @@ from typing import Optional
 
 CLIENT_NAME = "weltschmerz"
 CLIENT_VERSION = 0
+# request very few attributes from AniDB,
+# results might not fit into the reply package otherwise,
+# especially for files from episodes with long titles
 FMASK = (
     (
         [0, "", ""],  # byte 1
