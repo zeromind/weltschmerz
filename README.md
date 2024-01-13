@@ -49,7 +49,8 @@ Interactively deduplicate local files, as well as set the modified time of dupli
 ## Sort local files
 
 Sort/Move files, this will put the files into folders according to their anime ids (padded to 6 digits) from AniDB.
-e.g. files for [Seikai no Monshou (anime id 1)](https://anidb.net/anime/1) will be put in `<target_basedir>/by-id/00/00/01``
+e.g. files for [Seikai no Monshou (anime id 1)](https://anidb.net/anime/1) will be put in `<target_basedir>/by-id/00/00/01`.
+
 `./move_files.py --source-basedir /anime/unsorted --target-basedir /anime`
 
 ## Create symlinks for local anime folders
