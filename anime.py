@@ -10,10 +10,13 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Float,
+    JSON,
+    DateTime,
 )
 from sqlalchemy.orm import sessionmaker, relationship
 import sqlalchemy.sql.functions
 import os.path
+import datetime
 
 Base = declarative_base()
 
@@ -99,7 +102,7 @@ class File(Base):
     hash_sha1 = Column(String)
     hash_tth = Column(String)
     hash_ed2k = Column(String, nullable=False)
-    last_update = Column(Date)
+    last_update = Column(DateTime(timezone=True), onupdate=datetime.datetime.utcnow())
     __table_args__ = (
         Index("idx_file_hash_ed2k", "hash_ed2k", "filesize", unique=True),
     )
@@ -136,11 +139,10 @@ class LocalFile(Base):
 
 class MylistFile(Base):
     __tablename__ = "mylist"
-    ml_id = Column(BigInteger, nullable=False, primary_key=True, default=None)
-    fid = Column(Integer, ForeignKey("file.fid"), nullable=False)
+    fid = Column(Integer, ForeignKey("file.fid"), primary_key=True, nullable=False)
     ml_state = Column(Integer, nullable=False)
     ml_viewed = Column(Integer)
-    ml_viewdate = Column(Date)
+    ml_viewdate = Column(DateTime(timezone=True))
     ml_storage = Column(String)
     ml_source = Column(String)
     ml_other = Column(String)
@@ -199,6 +201,21 @@ class TitleScreenShot(Base):
     source_file_hash_tth = Column(String)
     source_file_hash_ed2k = Column(String, nullable=False)
     episode = relationship("Episode", back_populates="screenshots")
+
+
+class AnidbFileResponse(Base):
+    __tablename__ = "anidb_file_response"
+    hash_ed2k = Column(String, nullable=False, primary_key=True)
+    filesize = Column(BigInteger, nullable=False, primary_key=True)
+    fmask = Column(String, nullable=False, primary_key=True)
+    famask = Column(String, nullable=False, primary_key=True)
+    data = Column(JSON)
+    updated_at = Column(DateTime(timezone=True), onupdate=datetime.datetime.utcnow())
+
+    __table_args__ = (
+        Index("idx_anidb_file_response_hash_ed2k_filesize", "hash_ed2k", "filesize", unique=True),
+    )
+
 
 
 class DatabaseSession:

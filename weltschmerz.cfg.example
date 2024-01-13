@@ -1,25 +1,26 @@
-[anidb]
-server = api.anidb.net
-port = 9000
-
-[connection]
-local_port = 27775
-nat = 0
-protover = 3
-enc = UTF-8
-logfile = udpapi.log
-
-[user]
-username = mrmoo
-password = drinkonlymrmoomilk
-
 [client]
 name = weltschmerz
 version = 0
-database = weltschmerz.sqlite3
+# database to use
+# in URI format as supported by sqlalchemy.create_engine()
+# SQLite3 does not support the "numeric" collation used for the episode table
+database = postgresql+psycopg2://<username>:<password>@localhost/weltschmerz
 log = weltschmerz.log
 fileextensions = 7z aac ac3 ace asf ass avi dts dtshd flac flv idx js lrc m2ts m4a mk3d mka mks mkv mov mp3 mp4 mpeg mpg ogg ogm ogv qt rar rm rmvb smi smil srt ssa sub sup swf thd ts tts wav webm wma wmv xss zip
 folders = /anime/by-id
+
+[anidb]
+username = mrmoo
+password = drinkonlymrmoomilk
+# https://wiki.anidb.net/Profile#UDP_API_Key
+udp_api_key = ad_end
+# state:
+# 0 - unknown - state is unknown or the user doesn't want to provide this information
+# 1 - internal storage - the file is stored on hdd (but is not shared)
+# 2 - external storage - the file is stored on cd/dvd/...
+# 3 - deleted - the file has been deleted or is not available for other reasons (i.e. reencoded)
+# 4 - remote storage - the file is stored on NAS/cloud/...
+mylist_state = 4
 
 [tag-screenshot]
 basedir = /anime/screenshots

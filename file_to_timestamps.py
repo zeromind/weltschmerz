@@ -63,41 +63,49 @@ def get_config(config_file=os.path.expanduser("~/.config/weltschmerz/weltschmerz
 
 
 def do_mpv_start(file_name: str, timestamp: str):
-        subprocess.call(
-            [
-                "mpv",
-                "--load-scripts=no",
-                "--script=~/.config/mpv/scripts/titlecard_screenshot.lua",
-                f"--start={timestamp}",
-                "--aid=0",
-                "--sid=0",
-                "--script-opts=osc-visibility=always",
-                "--cache=no",
-                "--hwdec=auto-copy",
-                "--autoload-files=no",
-                "--access-references=no", # do not load linked files, breaks at least file-size property in mpv
-                file_name,
-            ]
-        )
+    subprocess.call(
+        [
+            "mpv",
+            "--load-scripts=no",
+            "--script=~/.config/mpv/scripts/titlecard_screenshot.lua",
+            f"--start={timestamp}",
+            "--aid=0",
+            "--sid=0",
+            "--script-opts=osc-visibility=always",
+            "--cache=no",
+            "--hwdec=auto-copy",
+            "--autoload-files=no",
+            "--access-references=no",  # do not load linked files, breaks at least file-size property in mpv
+            file_name,
+        ]
+    )
 
-def get_known_screenshots_local_file(dbs: anime.DatabaseSession, target_title_type: list[str], hash_ed2k: str, filesize: int):
-    return (dbs.session.query(anime.TitleScreenShot)
-            .distinct(anime.TitleScreenShot.time_position)
-            .filter(
-                anime.TitleScreenShot.title_type.in_(target_title_type),
-            )
-            .filter_by(
-                source_file_hash_ed2k=known_localfile.hash_ed2k,
-                source_file_size=known_localfile.filesize,
-            )
-        ).all()
+
+def get_known_screenshots_local_file(
+    dbs: anime.DatabaseSession,
+    target_title_type: list[str],
+    hash_ed2k: str,
+    filesize: int,
+):
+    return (
+        dbs.session.query(anime.TitleScreenShot)
+        .distinct(anime.TitleScreenShot.time_position)
+        .filter(
+            anime.TitleScreenShot.title_type.in_(target_title_type),
+        )
+        .filter_by(
+            source_file_hash_ed2k=known_localfile.hash_ed2k,
+            source_file_size=known_localfile.filesize,
+        )
+    ).all()
+
 
 if __name__ == "__main__":
     config = get_config()
     dbs = anime.DatabaseSession(config.database, False)
     target_title_type = [1, 3]
     if config.title_type:
-        target_title_type = [ int(config.title_type) ]
+        target_title_type = [int(config.title_type)]
     real_path = os.path.realpath(os.path.abspath(config.file_path))
     (directory, filename) = os.path.split(real_path)
 
@@ -115,8 +123,10 @@ if __name__ == "__main__":
             )
             .one()
         )
-        known_screenshots_local_file = get_known_screenshots_local_file(dbs, target_title_type, known_localfile.hash_ed2k, known_localfile.filesize)
-        if len(known_screenshots_local_file) >= config.title_limit:
+        known_screenshots_local_file = get_known_screenshots_local_file(
+            dbs, target_title_type, known_localfile.hash_ed2k, known_localfile.filesize
+        )
+        if len(known_screenshots_local_file) >= int(config.title_limit):
             logging.info(
                 f"found file '{filename}' in DB, enough title screenshots already present, skipping..."
             )
@@ -155,8 +165,17 @@ if __name__ == "__main__":
             if len(timestamps) >= 1:
                 for timestamp in timestamps:
                     do_mpv_start(real_path, timestamp)
-                    known_screenshots_local_file_refreshed = get_known_screenshots_local_file(dbs, target_title_type, known_localfile.hash_ed2k, known_localfile.filesize)
-                    if len(known_screenshots_local_file_refreshed) >= config.title_limit:
+                    known_screenshots_local_file_refreshed = (
+                        get_known_screenshots_local_file(
+                            dbs,
+                            target_title_type,
+                            known_localfile.hash_ed2k,
+                            known_localfile.filesize,
+                        )
+                    )
+                    if len(known_screenshots_local_file_refreshed) >= int(
+                        config.title_limit
+                    ):
                         logging.info(
                             f"found file '{filename}' in DB, enough title screenshots already present, exiting..."
                         )

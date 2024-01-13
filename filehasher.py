@@ -137,6 +137,15 @@ if __name__ == "__main__":
             hash_sha1=fhash.sha1,
             hash_ed2k=fhash.ed2k,
         )
+        known_file = (
+            hasher.dbs.session.query(anime.File)
+            .join(anime.LocalFile, anime.LocalFile.hash_ed2k == anime.File.hash_ed2k)
+            .filter(anime.File.hash_ed2k == lf.hash_ed2k)
+            .all()
+        )
+        if len(known_file) == 1:
+            lf.fid = known_file[0].fid
+            lf.aid = known_file[0].aid
         print(f"{lf.filename}: {lf.hash_crc}")
         hasher.dbs.session.merge(lf)
         hasher.dbs.session.commit()

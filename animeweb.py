@@ -84,6 +84,42 @@ def screenshots(anime_id: int = None) -> str:
         )
 
 
+@app.route("/screenshots/file/<int:file_id>", methods=["GET"])
+def file_screenshots(file_id: int) -> str:
+    screenshots = (
+        dbs.session.query(anime.TitleScreenShot)
+        .filter_by(fid=file_id)
+        .join(anime.Episode)
+        .order_by(
+            anime.TitleScreenShot.time_position,
+        )
+        .all()
+    )
+    return render_template(
+        "file_screenshots.html",
+        file_id=file_id,
+        screenshots=screenshots,
+    )
+
+
+@app.route("/screenshots/episode/<int:episode_id>", methods=["GET"])
+def episode_screenshots(episode_id: int) -> str:
+    screenshots = (
+        dbs.session.query(anime.TitleScreenShot)
+        .filter_by(eid=episode_id)
+        .join(anime.Episode)
+        .order_by(
+            anime.TitleScreenShot.time_position,
+        )
+        .all()
+    )
+    return render_template(
+        "episode_screenshots.html",
+        episode_id=episode_id,
+        screenshots=screenshots,
+    )
+
+
 def get_anime_path(
     anime_id: int,
     url_basedir: str = "/anime",
