@@ -8,6 +8,7 @@ import configparser
 import argparse
 import logging
 from typing import List, Tuple
+from itertools import islice
 
 
 def get_config(config_file="weltschmerz.cfg"):
@@ -65,6 +66,14 @@ class FileHasher:
         self.dbs = anime.DatabaseSession(db, echo)
         self.files = []
 
+    def _batched(self, iterable, n):
+        it = iter(iterable)
+        while True:
+            batch = list(islice(it, n))
+            if not batch:
+                return
+            yield batch
+
     def get_files(self, folders, folders_exclude, foldernames_exclude, exts):
         files = []
         for path in folders:
@@ -98,14 +107,7 @@ class FileHasher:
                     except UnicodeEncodeError as e:
                         logging.warning(f"Skipping a file: {e}")
                         continue
-                    if (
-                        self.dbs.session.query(anime.LocalFile)
-                        .filter_by(filename=filename, directory=real_path)
-                        .first()
-                    ):
-                        print(f"skipping {os.path.join(real_path, filename)}")
-                        continue
-                    elif (real_path, filename) in files:
+                    if (real_path, filename) in files:
                         continue
                     elif os.path.islink(os.path.join(real_path, filename)):
                         continue
@@ -113,7 +115,17 @@ class FileHasher:
                         print(f"found {os.path.join(real_path, filename)}")
                         files.append((real_path, filename))
 
-        return files
+        # check hashed files for the folders in batches to reduce complexity of the SQL query
+        folders_with_files_to_hash = list(set([f[0] for f in files]))
+        known_files = []
+        for batch in self._batched(folders_with_files_to_hash, 1000):
+            known_files += [
+                (kf.directory, kf.filename)
+                for kf in self.dbs.session.query(anime.LocalFile)
+                .filter(anime.LocalFile.directory.in_(batch))
+                .all()
+            ]
+        return [f for f in files if f not in known_files]
 
 
 if __name__ == "__main__":
@@ -125,7 +137,7 @@ if __name__ == "__main__":
         config.foldernames_exclude,
         config.extensions,
     )
-    print(len(files))
+    print(f"{len(files)} files to hash")
     for directory, filename in files:
         fhash = filehash.FileHash(directory, filename)
         lf = anime.LocalFile(
