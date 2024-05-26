@@ -197,7 +197,7 @@ if __name__ == "__main__":
             time_position_raw=config.timepos_raw,
             title_type=config.screenshot_type,
         )
-        if re.match("(by-id(/[0-9]{2}){3})", real_path):
+        if re.search("(by-id(/[0-9]{2}){3})", real_path):
             target_folder = os.path.join(
                 config.target_basedir,
                 re.search("(by-id(/[0-9]{2}){3})", real_path).group(1),
