@@ -15,7 +15,7 @@ def get_config(config_file=os.path.expanduser("~/.config/weltschmerz/weltschmerz
     config.read_file(open(config_file))
 
     parser = argparse.ArgumentParser(
-        description="Tag screenshot file with source file metadata and add title card screenshot to database"
+        description="Get timestamps of existing screensots for a given file's episode"
     )
     parser.add_argument(
         "--database",
@@ -34,8 +34,10 @@ def get_config(config_file=os.path.expanduser("~/.config/weltschmerz/weltschmerz
     parser.add_argument(
         "-T",
         "--title-type",
-        help="title type to query for",
-        default=1,
+        help="title type(s) to query for",
+        nargs="*",
+        type=int,
+        default=[1, 3],
         dest="title_type",
     )
     parser.add_argument(
@@ -83,7 +85,7 @@ def do_mpv_start(file_name: str, timestamp: str):
 
 def get_known_screenshots_local_file(
     dbs: anime.DatabaseSession,
-    target_title_type: list[str],
+    target_title_type: list[int],
     hash_ed2k: str,
     filesize: int,
 ):
@@ -103,9 +105,7 @@ def get_known_screenshots_local_file(
 if __name__ == "__main__":
     config = get_config()
     dbs = anime.DatabaseSession(config.database, False)
-    target_title_type = [1, 3]
-    if config.title_type:
-        target_title_type = [int(config.title_type)]
+    target_title_type = config.title_type
     real_path = os.path.realpath(os.path.abspath(config.file_path))
     (directory, filename) = os.path.split(real_path)
 
@@ -180,6 +180,7 @@ if __name__ == "__main__":
                             f"found file '{filename}' in DB, enough title screenshots already present, exiting..."
                         )
                         sys.exit(0)
-
+            else:
+                logging.warning(f"title screenshots for '{known_file.eid}' not found in DB")
     except NoResultFound as e:
-        logging.warning(f"'{filename}' not found in DB, only tagged minimal info...")
+        logging.warning(f"'{filename}' not found in DB")
