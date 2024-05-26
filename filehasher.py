@@ -75,7 +75,7 @@ class FileHasher:
             yield batch
 
     def get_files(self, folders, folders_exclude, foldernames_exclude, exts):
-        files = []
+        files = {}
         for path in folders:
             logging.info("".join(("Scanning for files: ", path)))
             for dirpath, dirnames, filenames in os.walk(path, topdown=True):
@@ -95,69 +95,81 @@ class FileHasher:
                     and f.encode("utf-8", errors="replace")
                 ]
                 print(
-                    "{}: {}".format(
-                        dirpath.encode("utf-8", errors="replace").decode("utf-8"),
-                        len(set(filenames)),
-                    )
+                    f'{dirpath.encode("utf-8", errors="replace").decode("utf-8")}: {len(set(filenames))}'
                 )
                 for filename in filenames:
                     real_path = os.path.realpath(os.path.abspath(dirpath))
+                    full_path = os.path.join(real_path, filename)
                     try:
-                        os.path.join(real_path, filename).encode("utf-8")
+                        full_path.encode("utf-8")
                     except UnicodeEncodeError as e:
                         logging.warning(f"Skipping a file: {e}")
                         continue
-                    if (real_path, filename) in files:
+                    if (
+                        real_path in files.keys()
+                        and filename in files[real_path]["files_to_hash"]
+                    ):
                         continue
-                    elif os.path.islink(os.path.join(real_path, filename)):
+                    elif os.path.islink(full_path):
                         continue
                     else:
-                        print(f"found {os.path.join(real_path, filename)}")
-                        files.append((real_path, filename))
+                        if real_path not in files.keys():
+                            files[real_path] = {
+                                "known_files": [],
+                                "files_to_hash": [filename],
+                            }
+                        else:
+                            files[real_path]["files_to_hash"].append(filename)
+                        # print(f"found {os.path.join(real_path, filename)}")
+                        # files.append((real_path, filename))
 
         # check hashed files for the folders in batches to reduce complexity of the SQL query
-        folders_with_files_to_hash = list(set([f[0] for f in files]))
-        known_files = []
-        for batch in self._batched(folders_with_files_to_hash, 1000):
-            known_files += [
-                (kf.directory, kf.filename)
-                for kf in self.dbs.session.query(anime.LocalFile)
+        for batch in self._batched(files.keys(), 1000):
+            for kf in (
+                self.dbs.session.query(anime.LocalFile)
                 .filter(anime.LocalFile.directory.in_(batch))
                 .all()
-            ]
-        return [f for f in files if f not in known_files]
+            ):
+                files[kf.directory]["known_files"].append(kf.filename)
+        return files
 
 
 if __name__ == "__main__":
     config = get_config()
     hasher = FileHasher(config.database, False)
-    files: List[Tuple[str, str]] = hasher.get_files(
+    files: dict[str, List[str]] = hasher.get_files(
         config.folders,
         config.folders_exclude,
         config.foldernames_exclude,
         config.extensions,
     )
-    print(f"{len(files)} files to hash")
-    for directory, filename in files:
-        fhash = filehash.FileHash(directory, filename)
-        lf = anime.LocalFile(
-            filename=fhash.filename,
-            directory=fhash.directory,
-            filesize=fhash.filesize,
-            hash_crc=fhash.crc32,
-            hash_md5=fhash.md5,
-            hash_sha1=fhash.sha1,
-            hash_ed2k=fhash.ed2k,
-        )
-        known_file = (
-            hasher.dbs.session.query(anime.File)
-            .join(anime.LocalFile, anime.LocalFile.hash_ed2k == anime.File.hash_ed2k)
-            .filter(anime.File.hash_ed2k == lf.hash_ed2k)
-            .all()
-        )
-        if len(known_file) == 1:
-            lf.fid = known_file[0].fid
-            lf.aid = known_file[0].aid
-        print(f"{lf.filename}: {lf.hash_crc}")
-        hasher.dbs.session.merge(lf)
-        hasher.dbs.session.commit()
+    for directory, data in files.items():
+        to_hash = list(set(data["files_to_hash"]).difference(data["known_files"]))
+        print(f'{directory}: {len(data["files_to_hash"])} file(s) found / {len(data["known_files"])} known - {len(to_hash)} to hash')
+        for filename in to_hash:
+            if filename in data["known_files"]:
+                continue
+            fhash = filehash.FileHash(directory, filename)
+            lf = anime.LocalFile(
+                filename=fhash.filename,
+                directory=fhash.directory,
+                filesize=fhash.filesize,
+                hash_crc=fhash.crc32,
+                hash_md5=fhash.md5,
+                hash_sha1=fhash.sha1,
+                hash_ed2k=fhash.ed2k,
+            )
+            known_file = (
+                hasher.dbs.session.query(anime.File)
+                .join(
+                    anime.LocalFile, anime.LocalFile.hash_ed2k == anime.File.hash_ed2k
+                )
+                .filter(anime.File.hash_ed2k == lf.hash_ed2k)
+                .all()
+            )
+            if len(known_file) == 1:
+                lf.fid = known_file[0].fid
+                lf.aid = known_file[0].aid
+            print(f"{lf.filename}: {lf.hash_crc}")
+            hasher.dbs.session.merge(lf)
+            hasher.dbs.session.commit()
