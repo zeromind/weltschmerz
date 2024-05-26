@@ -29,6 +29,7 @@ end
 -- titlecard type: 1 = ep, 2 = anime, 4 = ep preview
 function take_titlecard_screenshot(titlecard_type, done_command)
     local source_filename = mp.get_property_native("filename")
+    local source_file_path = mp.command_native({"normalize-path", mp.get_property("path")})
     local time_pos = mp.get_property("time-pos")
     local screenshot_file_path = get_screenshot_target_path(source_filename, time_pos)
     mp.commandv("screenshot-to-file", screenshot_file_path, "video")
@@ -44,9 +45,9 @@ function take_titlecard_screenshot(titlecard_type, done_command)
                 "-S",
                 screenshot_file_path,
                 "-F",
-                mp.get_property("path"),
+                source_file_path,
                 "-s",
-                mp.get_property("file-size"),
+                tostring(mp.get_property("file-size")),
                 "-d",
                 mp.get_property_osd("duration"),
                 "-D",
