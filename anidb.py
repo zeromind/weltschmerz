@@ -504,7 +504,7 @@ if __name__ == "__main__":
                 unknown_file.filesize,
                 unknown_file.hash_ed2k,
             )
-            if "fid" in anidb_result.keys():
+            if "fid" in anidb_result.keys() and config.add_to_mylist:
                 result = adbc.add_file_to_mylist(
                     file_id=anidb_result["fid"],
                     state=adbc.mylist_state,
