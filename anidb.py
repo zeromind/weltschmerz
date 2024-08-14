@@ -6,6 +6,7 @@ import pathlib
 import anime
 import configparser
 import argparse
+import re
 
 import yumemi
 import sys
@@ -133,18 +134,10 @@ def get_config(config_file: str = "weltschmerz.cfg"):
         action="store_true",
     )
     parser.add_argument(
-        "--source-basedir",
-        help="source folder to process",
-        default=None,
-        dest="source_basedir",
-    )
-    parser.add_argument(
-        "--dry-run",
-        "-n",
-        help="dry-run, no moving files",
-        default=False,
-        dest="dry_run",
-        action="store_true",
+        "--folders",
+        nargs="*",
+        help="folders to process",
+        default=re.split("\s+", config.get("client", "folders", fallback="")),
     )
     parser.add_argument(
         "--online",
@@ -463,12 +456,19 @@ if __name__ == "__main__":
         config.mylist_state,
         config.debug,
     )
-    unknown_files = (
-        adbc.dbs.session.query(anime.LocalFile)
-        .filter(anime.LocalFile.directory.like(f'{config.source_basedir.rstrip("/")}%'))
-        .filter((anime.LocalFile.fid == None) | (anime.LocalFile.aid == None))
-        .all()
-    )
+    unknown_files = []
+    for folder in config.folders:
+        unknown_files_folder = (
+            adbc.dbs.session.query(anime.LocalFile)
+            .filter(
+                anime.LocalFile.directory.like(f'{folder.rstrip("/")}%')
+            )
+            .filter((anime.LocalFile.fid == None) | (anime.LocalFile.aid == None))
+            .all()
+        )
+        unknown_files += unknown_files_folder
+        print(f"DEBUG: unknown files ({folder}): {len(unknown_files_folder)}")
+
     print(f"INFO: unknown files: {len(unknown_files)}")
     known_files = []
     files_to_look_up = []
