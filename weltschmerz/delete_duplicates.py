@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 
 import os
-import pyselect
+import weltschmerz.pyselect as pyselect
 import sys
 import difflib
 import datetime
-import anime
+import weltschmerz.anime as anime
 from sqlalchemy import func
 import argparse
 import configparser
@@ -62,9 +62,12 @@ def update_mtimes(files):
     return available_files
 
 
-if __name__ == "__main__":
-    config = get_config()
-    dbs = anime.DatabaseSession(config.database, False)
+def remove_duplicate_files(
+    database: str,
+    preferred_directory_pattern: str,
+    dry_run: bool = False,
+):
+    dbs = anime.DatabaseSession(database, False)
     known_dupes = (
         dbs.session.query(anime.LocalFile.hash_ed2k, anime.LocalFile.filesize)
         .group_by(anime.LocalFile.hash_ed2k, anime.LocalFile.filesize)
@@ -84,11 +87,11 @@ if __name__ == "__main__":
             .all()
         )
 
-        print("\n" * 8 + "#" * 128 + "\n")
+        print("[ {current:05} / {total:05} ]".format(current=i, total=len(known_dupes)))
         available_files = update_mtimes(known_files)
         if len(available_files) <= 1:
             continue
-        print("[ {current:05} / {total:05} ]".format(current=i, total=len(known_dupes)))
+        print("\n" * 8 + "#" * 128 + "\n")
         file_names = list(
             set([available_file.filename for available_file in available_files])
         )
@@ -96,12 +99,10 @@ if __name__ == "__main__":
         if len(file_names) == 1:
             selection = available_files[0]
             # keep files from directory matching preferred pattern
-            if config.preferred_directory_pattern:
+            if preferred_directory_pattern:
                 print("preferred pattern found")
                 for available_file in available_files:
-                    if re.match(
-                        config.preferred_directory_pattern, available_file.directory
-                    ):
+                    if re.match(preferred_directory_pattern, available_file.directory):
                         print(
                             f'selecting file from preferred location: "{available_file.directory}" - "{available_file.filename}"'
                         )
@@ -129,10 +130,19 @@ if __name__ == "__main__":
                 selection.full_path
             ) != os.path.realpath(file.full_path):
                 print(f"deleting file: {file.full_path}")
-                if not config.dry_run:
+                if not dry_run:
                     os.remove(file.full_path)
                 print(f"removing file from db: {file.full_path}")
-                if not config.dry_run:
+                if not dry_run:
                     dbs.session.delete(file)
-        if not config.dry_run:
+        if not dry_run:
             dbs.session.commit()
+
+
+if __name__ == "__main__":
+    config = get_config()
+    remove_duplicate_files(
+        database=config.database,
+        preferred_directory_pattern=config.preferred_directory_pattern,
+        dry_run=config.dry_run,
+    )

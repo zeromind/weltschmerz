@@ -5,3 +5,5 @@ weltschmerz.cfg
 __pycache__
 anime-titles*.xml
 export
+dist
+*.egg-info

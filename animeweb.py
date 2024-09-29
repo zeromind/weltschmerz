@@ -1,5 +1,5 @@
 from flask import Flask, escape, request, render_template, redirect
-import anime
+import weltschmerz.anime as anime
 import os
 
 app = Flask(__name__)

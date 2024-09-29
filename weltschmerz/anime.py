@@ -213,9 +213,13 @@ class AnidbFileResponse(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=datetime.datetime.utcnow())
 
     __table_args__ = (
-        Index("idx_anidb_file_response_hash_ed2k_filesize", "hash_ed2k", "filesize", unique=True),
+        Index(
+            "idx_anidb_file_response_hash_ed2k_filesize",
+            "hash_ed2k",
+            "filesize",
+            unique=True,
+        ),
     )
-
 
 
 class DatabaseSession:

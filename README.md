@@ -21,7 +21,7 @@ See also [LICENSE.md](./LICENSE.md)
 
 ## Configuration file
 
-Copy `weltschmerz.cfg.example` to `weltschmerz.cfg` and adjust as necessary.
+Copy `weltschmerz.cfg.example` to `weltschmerz.cfg` or `$HOME/.config/weltschmerz/weltschmerz.cfg` and adjust as necessary.
 
 ## Import AniDB MyMist export
 
@@ -34,24 +34,24 @@ It is recommended to import your MyList first, as that will populate the Anime, 
 
 ## Hash local files
 
-`./filehasher.py --folders /anime/by-id/00/00/01/ /anime/by-id/00/00/02/`
+`weltschmerz files hash --folder /anime/by-id/00/00/01/ --folder /anime/by-id/00/00/02/`
 
 ## Add files to your AniDB MyList
 
 Lookup the local files in AniDB and add them to your MyList, if they are present in AniDB.
-`./anidb.py --source-basedir /anime/by-id --debug --online`
+`weltschmerz anidb lookup-files --folder /anime/by-id/00 --folder /anime/by-id/01 --debug --online --add-to-mylist --mylist-state 4`
 
 ## Deduplicate local files
 
 Interactively deduplicate local files, as well as set the modified time of duplicate files to the oldest one.
-`./remove_dupes.py --preferred-directory-pattern /anime/by-id`
+`weltschmerz files remove-duplicates --preferred-directory-pattern /anime/by-id`
 
 ## Sort local files
 
 Sort/Move files, this will put the files into folders according to their anime ids (padded to 6 digits) from AniDB.
 e.g. files for [Seikai no Monshou (anime id 1)](https://anidb.net/anime/1) will be put in `<target_basedir>/by-id/00/00/01`.
 
-`./move_files.py --source-basedir /anime/unsorted --target-basedir /anime`
+`weltschmerz files sort --source-basedir /anime/unsorted --target-basedir /anime`
 
 ## Create symlinks for local anime folders
 

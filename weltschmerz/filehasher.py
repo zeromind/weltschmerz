@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-import anime
-import filehash
+import weltschmerz.anime as anime
+import weltschmerz.filehash as filehash
 import os
 import re
 import configparser
@@ -134,18 +134,25 @@ class FileHasher:
         return files
 
 
-if __name__ == "__main__":
-    config = get_config()
-    hasher = FileHasher(config.database, False)
+def hash_files(
+    database: str,
+    folders: List[str],
+    folders_exclude: List[str],
+    foldernames_exclude: List[str],
+    file_extensions: List[str],
+):
+    hasher = FileHasher(database, False)
     files: dict[str, List[str]] = hasher.get_files(
-        config.folders,
-        config.folders_exclude,
-        config.foldernames_exclude,
-        config.extensions,
+        folders,
+        folders_exclude,
+        foldernames_exclude,
+        file_extensions,
     )
     for directory, data in files.items():
         to_hash = list(set(data["files_to_hash"]).difference(data["known_files"]))
-        print(f'{directory}: {len(data["files_to_hash"])} file(s) found / {len(data["known_files"])} known - {len(to_hash)} to hash')
+        print(
+            f'{directory}: {len(data["files_to_hash"])} file(s) found / {len(data["known_files"])} known - {len(to_hash)} to hash'
+        )
         for filename in to_hash:
             if filename in data["known_files"]:
                 continue
@@ -173,3 +180,14 @@ if __name__ == "__main__":
             print(f"{lf.filename}: {lf.hash_crc}")
             hasher.dbs.session.merge(lf)
             hasher.dbs.session.commit()
+
+
+if __name__ == "__main__":
+    config = get_config()
+    hash_files(
+        database=config.database,
+        folders=config.folders,
+        folders_exclude=config.folders_exclude,
+        foldernames_exclude=config.foldernames_exclude,
+        file_extensions=config.extensions,
+    )

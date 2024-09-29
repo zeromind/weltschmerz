@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import anime
+import weltschmerz.anime as anime
 import os.path
 import configparser
 import argparse
@@ -34,13 +34,12 @@ def get_config(config_file: str = "weltschmerz.cfg"):
     return args
 
 
-if __name__ == "__main__":
-    config = get_config()
-    dbs = anime.DatabaseSession(config.database, False)
-    if config.folder:
+def remove_deleted_files(database: str, folder=None, dry_run: bool = False):
+    dbs = anime.DatabaseSession(database, False)
+    if folder:
         known_files = (
             dbs.session.query(anime.LocalFile)
-            .filter(anime.LocalFile.directory.like(f'{config.folder.rstrip("/")}%'))
+            .filter(anime.LocalFile.directory.like(f'{folder.rstrip("/")}%'))
             .all()
         )
     else:
@@ -50,12 +49,20 @@ if __name__ == "__main__":
     for known_file in known_files:
         if not os.path.isfile(known_file.full_path):
             print(f"###### removing {known_file.full_path}")
-            if not config.dry_run:
+            if not dry_run:
                 dbs.session.delete(known_file)
             else:
                 print("##### INFO: dry-run requested, not removing deleted file")
         else:
             continue
-            print(f"###### found {known_file.full_path}")
-    if not config.dry_run:
+    if not dry_run:
         dbs.session.commit()
+
+
+if __name__ == "__main__":
+    config = get_config()
+    remove_deleted_files(
+        database=config.database,
+        folder=config.folder,
+        dry_run=config.dry_run,
+    )

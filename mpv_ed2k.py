@@ -3,7 +3,7 @@
 import os.path
 import subprocess
 import re
-import anime
+import weltschmerz.anime as anime
 import configparser
 import argparse
 

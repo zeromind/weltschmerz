@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import anime
+import weltschmerz.anime as anime
 import os
 import logging
 import subprocess

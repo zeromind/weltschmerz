@@ -3,7 +3,7 @@
 import os.path
 import shutil
 import pathlib
-import anime
+import weltschmerz.anime as anime
 import configparser
 import argparse
 import sys

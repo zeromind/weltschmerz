@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-import anidb
-import anime
+import weltschmerz.anidb as anidb
+import weltschmerz.anime as anime
 
 
 config = anidb.get_config()

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-import anime
-import filehash
+import weltschmerz.anime as anime
+import weltschmerz.filehash as filehash
 import configparser
 import os
 import argparse
@@ -24,19 +24,36 @@ def get_config(config_file: str = "weltschmerz.cfg"):
         default=config.get("client", "log"),
     )
     parser.add_argument("--folder", help="folder to process", default="/")
+    parser.add_argument(
+        "--dry-run",
+        "-n",
+        help="dry-run, no removing changed files",
+        default=False,
+        dest="dry_run",
+        action="store_true",
+    )
 
     args = parser.parse_args()
     return args
 
 
-if __name__ == "__main__":
-    config = get_config()
-    dbs = anime.DatabaseSession(config.database, False)
+def remove_changed_files(database: str, folder: str, dry_run: bool = False):
+    dbs = anime.DatabaseSession(database, False)
     hashed_files = dbs.session.query(anime.LocalFile).filter(
-        anime.LocalFile.directory.like(config.folder + "%")
+        anime.LocalFile.directory.like(folder + "%")
     )
     for local_file in hashed_files:
         if os.path.isfile(local_file.full_path):
             if local_file.filesize != os.path.getsize(local_file.full_path):
                 print(f"###### filesize mismatch, removing {local_file.full_path}")
-                dbs.session.delete(local_file)
+                if not dry_run:
+                    dbs.session.delete(local_file)
+
+
+if __name__ == "__main__":
+    config = get_config()
+    remove_changed_files(
+        database=config.database,
+        folder=config.folder,
+        dry_run=config.dry_run,
+    )

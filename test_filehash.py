@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import unittest
-import filehash
+import weltschmerz.filehash as filehash
 
 
 class TestFilehash(unittest.TestCase):

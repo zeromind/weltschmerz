@@ -3,18 +3,17 @@
 import os.path
 import shutil
 import pathlib
-import anime
 import configparser
 import argparse
 import re
 
 import yumemi
 import sys
-import anime
-import masks
+import weltschmerz.anime as anime
+import weltschmerz.masks as masks
 import time
 import datetime
-from typing import Optional
+from typing import Optional, Union, List
 
 CLIENT_NAME = "weltschmerz"
 CLIENT_VERSION = 0
@@ -442,27 +441,37 @@ class AniDBClient:
         return file_data
 
 
-if __name__ == "__main__":
-    config = get_config()
+def lookup_files(
+    database: str,
+    database_verbose: bool = False,
+    fmask=FMASK,
+    famask=FAMASK,
+    online: bool = False,
+    anidb_username: Optional[str] = None,
+    anidb_password: Optional[str] = None,
+    anidb_udp_api_key: Optional[str] = None,
+    add_to_mylist: bool = False,
+    mylist_state: int = 4,
+    debug: bool = False,
+    folders: List[str] = ["/"],
+):
     adbc = AniDBClient(
-        config.database,
-        False,
-        FMASK,
-        FAMASK,
-        config.online,
-        config.anidb_username,
-        config.anidb_password,
-        config.anidb_udp_api_key,
-        config.mylist_state,
-        config.debug,
+        local_database=database,
+        local_database_verbose=database_verbose,
+        fmask=fmask,
+        famask=famask,
+        online=online,
+        anidb_username=anidb_username,
+        anidb_password=anidb_password,
+        anidb_udp_api_key=anidb_udp_api_key,
+        mylist_state=mylist_state,
+        debug=debug,
     )
     unknown_files = []
-    for folder in config.folders:
+    for folder in folders:
         unknown_files_folder = (
             adbc.dbs.session.query(anime.LocalFile)
-            .filter(
-                anime.LocalFile.directory.like(f'{folder.rstrip("/")}%')
-            )
+            .filter(anime.LocalFile.directory.like(f'{folder.rstrip("/")}%'))
             .filter((anime.LocalFile.fid == None) | (anime.LocalFile.aid == None))
             .all()
         )
@@ -473,7 +482,7 @@ if __name__ == "__main__":
     known_files = []
     files_to_look_up = []
     for i, unknown_file in enumerate(unknown_files, start=1):
-        if config.debug:
+        if debug:
             print(f"DEBUG: {i}/{len(unknown_files)}")
         known_file = (
             adbc.dbs.session.query(anime.File)
@@ -486,7 +495,7 @@ if __name__ == "__main__":
             unknown_file.fid = known_file.fid
             unknown_file.aid = known_file.aid
             known_files.append(unknown_file)
-            if config.add_to_mylist and config.online:
+            if add_to_mylist and online:
                 mylist_file = (
                     adbc.dbs.session.query(anime.MylistFile)
                     .filter(anime.MylistFile.fid == unknown_file.fid)
@@ -499,20 +508,36 @@ if __name__ == "__main__":
                         state=adbc.mylist_state,
                     )
 
-        elif config.online:
+        elif online:
             anidb_result = adbc.lookup_file(
                 unknown_file.filesize,
                 unknown_file.hash_ed2k,
             )
-            if "fid" in anidb_result.keys() and config.add_to_mylist:
+            if "fid" in anidb_result.keys() and add_to_mylist:
                 result = adbc.add_file_to_mylist(
                     file_id=anidb_result["fid"],
                     state=adbc.mylist_state,
                 )
         if i % 10 == 0 and len(adbc.dbs.session.dirty) > 0:
-            if config.debug:
+            if debug:
                 print("DEBUG: comitting...")
             adbc.dbs.session.commit()
     adbc.dbs.session.commit()
     if adbc.online and adbc.client:
         adbc.client.logout()
+
+
+if __name__ == "__main__":
+    config = get_config()
+    lookup_files(
+        database=config.database,
+        database_verbose=config.database_verbose,
+        online=config.online,
+        anidb_username=config.anidb_username,
+        anidb_password=config.anidb_password,
+        anidb_udp_api_key=config.anidb_udp_api_key,
+        add_to_mylist=config.add_to_mylist,
+        mylist_state=config.mylist_state,
+        debug=config.debug,
+        folders=config.folders,
+    )

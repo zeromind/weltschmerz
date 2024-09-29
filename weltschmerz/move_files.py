@@ -3,7 +3,7 @@
 import os.path
 import shutil
 import pathlib
-import anime
+import weltschmerz.anime as anime
 import configparser
 import argparse
 
@@ -55,13 +55,18 @@ def get_config(config_file: str = "weltschmerz.cfg"):
     return args
 
 
-if __name__ == "__main__":
-    config = get_config()
-    dbs = anime.DatabaseSession(config.database, False)
+def sort_files(
+    database: str,
+    source_basedir: str,
+    target_basedir: str,
+    target_crc32: bool = False,
+    dry_run: bool = False,
+):
+    dbs = anime.DatabaseSession(database, False)
     known_files = (
         dbs.session.query(anime.LocalFile)
         .join(anime.File, anime.LocalFile.hash_ed2k == anime.File.hash_ed2k)
-        .filter(anime.LocalFile.directory.like(f'{config.source_basedir.rstrip("/")}%'))
+        .filter(anime.LocalFile.directory.like(f'{source_basedir.rstrip("/")}%'))
         .all()
     )
     print(len(known_files))
@@ -79,7 +84,7 @@ if __name__ == "__main__":
                 for i in range(0, AID_PAD_WIDTH, AID_CHUNK_SIZE)
             ]
         )
-        target_dir = os.path.join(config.target_basedir, "by-id", aid_path)
+        target_dir = os.path.join(target_basedir, "by-id", aid_path)
         if local_file.directory not in [target_dir]:
             if os.path.isfile(local_file.full_path):
                 print(
@@ -90,7 +95,7 @@ if __name__ == "__main__":
                     print(
                         f'##### INFO: moving "{local_file.full_path}" to "{target_dir}"'
                     )
-                    if not config.dry_run:
+                    if not dry_run:
                         shutil.move(
                             os.path.join(local_file.directory, local_file.filename),
                             target_dir,
@@ -101,7 +106,7 @@ if __name__ == "__main__":
                     else:
                         print("##### INFO: dry-run requested, not moving file")
                 else:
-                    if config.target_crc32:
+                    if target_crc32:
                         print(
                             f'##### INFO: moving "{local_file.full_path}" to "{target_dir}", adding CRC32 to the filename'
                         )
@@ -112,7 +117,7 @@ if __name__ == "__main__":
                             + f'[{local_file.hash_crc}].{local_file.filename.split(".")[-1]}'
                         )
                         print(f'##### INFO: target filename "{target_filename}"')
-                        if not config.dry_run:
+                        if not dry_run:
                             shutil.move(
                                 os.path.join(local_file.directory, local_file.filename),
                                 os.path.join(target_dir, target_filename),
@@ -127,3 +132,14 @@ if __name__ == "__main__":
                         print(
                             f'##### WARNING: "{os.path.join(target_dir, local_file.filename)}" already present'
                         )
+
+
+if __name__ == "__main__":
+    config = get_config()
+    sort_files(
+        database=config.database,
+        source_basedir=config.source_basedir,
+        target_basedir=config.target_basedir,
+        target_crc32=config.target_crc32,
+        dry_run=config.dry_run,
+    )
