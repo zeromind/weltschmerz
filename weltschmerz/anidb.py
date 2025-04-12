@@ -238,6 +238,9 @@ class AniDBClient:
     ) -> dict:
         if not ((file_size and hash_ed2k) or file_id):
             raise ValueError
+        if file_size and file_size >= 100000000000:
+            print(f"WARN: Adding to mylist failed for {file_info}: {type(e)}")
+            return {}
         if self.online:
             ##############
             # ask AniDB
@@ -357,6 +360,9 @@ class AniDBClient:
 
     def lookup_file(self, file_size: int, hash_ed2k: str) -> dict:
         file_data = {}
+        if file_size >= 100000000000:
+            print(f"WARN: File is too big for UDP API {hash_ed2k} / {file_size}")
+            return file_data
         ##############
         # try cache
         ##############
