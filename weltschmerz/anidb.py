@@ -211,8 +211,10 @@ class AniDBClient:
                 if self.anidb_udp_api_key:
                     self.client.encrypt(self.anidb_username, self.anidb_udp_api_key)
                 result = self.client.auth(self.anidb_username, self.anidb_password)
+                result_encoding = self.client.command('ENCODING', {'name': 'UTF-8'})
                 if self.debug:
                     print("DEBUG: ", result.code, result.message)
+                    print("DEBUG: ", result_encoding.code, result_encoding.message)
             else:
                 raise ValueError
 
