@@ -216,6 +216,9 @@ def dict_to_mylist_anime_worker():
                         if dbs.session.dirty:
                             dbs.session.commit()
 
+        print(
+            f"anime: {anime_mylist_anime.aid} - eps: {anime_mylist_anime.ml_count_episodes} - watched: {anime_mylist_anime.ml_watched_episodes} done"
+        )
         if dbs.session.dirty:
             dbs.session.commit()
         q_out.task_done()
