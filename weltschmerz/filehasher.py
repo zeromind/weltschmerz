@@ -29,27 +29,27 @@ def get_config(config_file="weltschmerz.cfg"):
         "--folders",
         nargs="*",
         help="folders to process",
-        default=re.split("\s+", config.get("client", "folders", fallback="")),
+        default=re.split(r"\s+", config.get("client", "folders", fallback="")),
     )
     parser.add_argument(
         "--folders-exclude",
         dest="folders_exclude",
         nargs="*",
         help="folders to exclude",
-        default=re.split("\s+", config.get("client", "folders_exclude")),
+        default=re.split(r"\s+", config.get("client", "folders_exclude")),
     )
     parser.add_argument(
         "--foldernames-exclude",
         dest="foldernames_exclude",
         nargs="*",
         help="foldernames to exclude",
-        default=re.split("\s+", config.get("client", "foldernames_exclude")),
+        default=re.split(r"\s+", config.get("client", "foldernames_exclude")),
     )
     parser.add_argument(
         "--extensions",
         nargs="*",
         help="folders to process",
-        default=re.split("\s+", config.get("client", "fileextensions")),
+        default=re.split(r"\s+", config.get("client", "fileextensions")),
     )
 
     args = parser.parse_args()

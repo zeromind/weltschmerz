@@ -56,7 +56,7 @@ if __name__ == "__main__":
                 if title[0] in ("main"):
                     main_title_lang = title[1]
                     title_sane = re.sub(
-                        "\.$",
+                        r"\.$",
                         "。",
                         title[2].translate(
                             str.maketrans("/", "⁄", "".join(FN_BLACKLIST))
@@ -74,7 +74,7 @@ if __name__ == "__main__":
                     ("x-", title[1], "t")
                 ):
                     title_sane = re.sub(
-                        "\.$",
+                        r"\.$",
                         "。",
                         title[2].translate(
                             str.maketrans("/", "⁄", "".join(FN_BLACKLIST))
@@ -89,7 +89,7 @@ if __name__ == "__main__":
                         )
                 if title[0] == "official" and title[1] == "en":
                     title_sane = re.sub(
-                        "\.$",
+                        r"\.$",
                         "。",
                         title[2].translate(
                             str.maketrans("/", "⁄", "".join(FN_BLACKLIST))
