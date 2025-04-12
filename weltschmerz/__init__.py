@@ -9,6 +9,7 @@ import weltschmerz.delete_duplicates as delete_duplicates
 import weltschmerz.move_files as move_files
 import configparser
 import os
+import re
 from typing import List, Tuple, Union
 
 CONFIG_FILES = ["weltschmerz.cfg", "~/.config/weltschmerz/weltschmerz.cfg"]
@@ -56,19 +57,31 @@ def files_group():
     help="folders to process",
 )
 @click.option(
-    "--folder-exclude", "folders_exclude", multiple=True, help="folders to exclude"
+    "--folder-exclude",
+    "folders_exclude",
+    multiple=True,
+    help="folders to exclude",
+    default=re.split(
+        r"\s+", config.get("client", "folders_exclude", fallback="/dev /proc /sys")
+    ),
 )
 @click.option(
     "--foldername-exclude",
     "foldernames_exclude",
     multiple=True,
     help="folder names to exclude",
+    default=re.split(
+        r"\s+", config.get("client", "foldernames_exclude", fallback=".git .cache")
+    ),
 )
 @click.option(
     "--file-extension",
     "file_extensions",
     multiple=True,
     help="file extensions to process",
+    default=re.split(
+        r"\s+", config.get("client", "fileextensions", fallback=".mkv .avi .ass")
+    ),
 )
 @click.pass_context
 def files_hash(
@@ -172,7 +185,9 @@ def files_remove_changed(ctx, folders: List[str], dry_run: bool = False):
     help="dry-run",
 )
 @click.pass_context
-def files_delete_duplicates(ctx, preferred_directory_pattern: str, dry_run: bool = False):
+def files_delete_duplicates(
+    ctx, preferred_directory_pattern: str, dry_run: bool = False
+):
     delete_duplicates.remove_duplicate_files(
         database=ctx.obj["DATABASE"],
         preferred_directory_pattern=preferred_directory_pattern,
