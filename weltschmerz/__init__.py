@@ -200,16 +200,16 @@ def files_delete_duplicates(
 #######################
 @files_group.command(name="sort", help="sort files")
 @click.option(
-    "--source-folder",
-    "source_folders",
+    "--source-basedir",
+    "source_basedirs",
     multiple=True,
     required=True,
     type=click.Path(exists=True, readable=True, resolve_path=True),
-    help="source folders",
+    help="source base directories",
 )
 @click.option(
-    "--target-folder",
-    "target_folder",
+    "--target-basedir",
+    "target_basedir",
     type=click.Path(
         exists=True,
         readable=True,
@@ -219,7 +219,7 @@ def files_delete_duplicates(
         resolve_path=True,
     ),
     required=True,
-    help="target folder",
+    help="target base directory",
 )
 @click.option(
     "-n",
@@ -241,17 +241,17 @@ def files_delete_duplicates(
 @click.pass_context
 def files_sort(
     ctx,
-    source_folders: List[str],
-    target_folder: str,
+    source_basedirs: List[str],
+    target_basedir: str,
     target_crc32: bool = False,
     dry_run: bool = False,
 ):
-    for source_folder in source_folders:
-        click.echo(source_folder)
+    for source_basedir in source_basedirs:
+        click.echo(source_basedir)
         move_files.sort_files(
             database=ctx.obj["DATABASE"],
-            source_folder=source_folder,
-            target_folder=target_folder,
+            source_basedir=source_basedir,
+            target_basedir=target_basedir,
             target_crc32=target_crc32,
             dry_run=dry_run,
         )
