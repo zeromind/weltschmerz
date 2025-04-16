@@ -521,11 +521,14 @@ def lookup_files(
                 unknown_file.filesize,
                 unknown_file.hash_ed2k,
             )
-            if "fid" in anidb_result.keys() and add_to_mylist:
-                result = adbc.add_file_to_mylist(
-                    file_id=anidb_result["fid"],
-                    state=adbc.mylist_state,
-                )
+            if "fid" in anidb_result.keys():
+                unknown_file.aid = anidb_result["aid"]
+                unknown_file.fid = anidb_result["fid"]
+                if add_to_mylist:
+                    result = adbc.add_file_to_mylist(
+                        file_id=anidb_result["fid"],
+                        state=adbc.mylist_state,
+                    )
         if i % 10 == 0 and len(adbc.dbs.session.dirty) > 0:
             if debug:
                 print("DEBUG: comitting...")
